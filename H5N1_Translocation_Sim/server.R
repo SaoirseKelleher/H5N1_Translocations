@@ -124,6 +124,9 @@ function(input, output, session) {
     })
     
     output$baseline_sims <- renderPlot({
+      
+      input$sim_button
+      
       model_data <- list(
         nTimesteps = 10,
         n_0_mu = input$n_0_mu,
@@ -137,9 +140,13 @@ function(input, output, session) {
                    input$t9_flu)
       )
       plot_baseline(model_data, nreps = 1000)
-    })
+    }) |>
+      bindEvent(input$sim_button)
     
     output$baseline_survival <- renderText({
+      
+      input$sim_button
+      
       model_data <- list(
         nTimesteps = 10,
         n_0_mu = input$n_0_mu,
@@ -153,6 +160,6 @@ function(input, output, session) {
                    input$t9_flu)
       )
       get_baseline_surv(model_data, nreps = 1000)
-      
-    })
+    }) |>
+      bindEvent(input$sim_button)
 }

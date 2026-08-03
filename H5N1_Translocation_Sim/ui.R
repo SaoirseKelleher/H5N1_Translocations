@@ -3,10 +3,8 @@
 library(shiny)
 library(bslib)
 
-# Define UI for application that draws a histogram
-ui <- page_sidebar(
-  title = "H5N1 Simulator",
-  # Create sidebar with input selectors
+# Baseline page
+baseline_page <- layout_sidebar(
   sidebar = sidebar(title = "Set Parameters",
                     card(
                       card_header("Initial population"),
@@ -27,10 +25,10 @@ ui <- page_sidebar(
                       plotOutput("n_w_proj", height = "100px")
                     ),
                     card(
-                      card_header("Baseline growth rate"),
+                      card_header("Growth rate"),
                       sliderInput(
                         "base_lambda_mu",
-                        label = "Mean",
+                        label = "Mean (base)",
                         min = 0,
                         max = 3,
                         value = 1,
@@ -38,7 +36,7 @@ ui <- page_sidebar(
                       ),
                       sliderInput(
                         "base_lambda_sd",
-                        label = "Std. Deviation",
+                        label = "Std. Deviation (base)",
                         min = 0,
                         max = 1,
                         value = .1,
@@ -46,7 +44,7 @@ ui <- page_sidebar(
                       ),
                       sliderInput(
                         "flu_lambda_mu",
-                        label = "Mean",
+                        label = "Mean (flu)",
                         min = 0,
                         max = 3,
                         value = 0.6, 
@@ -54,7 +52,7 @@ ui <- page_sidebar(
                       ),
                       sliderInput(
                         "flu_lambda_sd",
-                        label = "Std. Deviation",
+                        label = "Std. Deviation (flu)",
                         min = 0,
                         max = 1,
                         value = .1,
@@ -69,7 +67,7 @@ ui <- page_sidebar(
                                    value = 0.3,
                                    min = 0,
                                    max = 1
-                                   ),
+                      ),
                       numericInput("t2_flu",
                                    "t=2",
                                    value = 0.3,
@@ -131,9 +129,10 @@ ui <- page_sidebar(
                                    max = 1
                       ),
                     )
-                    ),
+  ),
   card(
     card_header("Simulated populations"),
+    actionButton("sim_button", "Run simulation"),
     card(
       plotOutput("baseline_sims")
     ),
@@ -142,6 +141,17 @@ ui <- page_sidebar(
       value = textOutput("baseline_survival"),
       theme = "teal"
     ),
-    
+  )
+)
+
+# Define UI for application that draws a histogram
+ui <- page_navbar(
+  title = "H5N1 Simulator",
+  nav_panel(
+    "Baseline simulations",
+    baseline_page
   ), 
+  nav_panel(
+    "Translocation optimisation"
+  )
 )
