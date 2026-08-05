@@ -5,29 +5,87 @@ library(bslib)
 library(shinythemes)
 
 # Baseline page
-baseline_page <- layout_sidebar(
-  sidebar = sidebar(title = "Set Parameters",
+baseline_page <- card(
+  card_header("Simulated populations"),
+  actionButton("sim_button", "Run simulation"),
+  card(
+    plotOutput("baseline_sims")
+  ),
+  value_box(
+    title = "Proportion of simulations where population persists:",
+    value = textOutput("baseline_survival"),
+    theme = "primary"
+  ),
+)
+
+translocation_page <- card(
+  card_header("Simulated translocations"),
+  actionButton("sim_translocations", "Run simulation"),
+  card(
+    plotOutput("translocate_sims")
+  ),
+  card(
+    plotOutput("translocate_sims_base")
+  ),
+  value_box(
+    title = "Proportion of simulations where population persists (with translocations):",
+    value = textOutput("translocate_survival"),
+    theme = "primary"
+  ),
+  value_box(
+    title = "Proportion of simulations where population persists (no translocations):",
+    value = textOutput("translocate_survival_base"),
+    theme = "secondary"
+  ),
+)
+
+optimisation_page <- card(
+  card_header("Optimise"),
+  actionButton("run_optimiser", "Run optimisation"),
+  card(
+    plotOutput("optimised_translocations"),
+    plotOutput("optimised_translocations_preds"),
+    plotOutput("optimised_base"),
+    value_box(
+      title = "Proportion of simulations where population persists (with translocations):",
+      value = textOutput("optimised_survival"),
+      theme = "primary"
+    ),
+    value_box(
+      title = "Proportion of simulations where population persists (no translocations):",
+      value = textOutput("optimised_survival_base"),
+      theme = "secondary"
+    )
+  )
+)
+
+
+# Define UI for application that draws a histogram
+ui <- page_navbar(theme = bs_theme(preset = "superhero"),
+                  title = "H5N1 Simulator",
+                  id = "nav",
+                  sidebar = sidebar(
+                    title = "Set Parameters",
                     width = 500,
                     card(
-                      card_header("Initial population"),
+                      card_header("Initial wild population"),
                       sliderInput(
-                        "n_0_mu",
-                        label = "Mean",
+                        "n_0_w_mu",
+                        label = " Mean (Wild)",
                         min = 0,
                         max = 10000,
                         value = 1000
                       ),
                       sliderInput(
-                        "n_0_sd",
-                        label = "Std. Deviation",
+                        "n_0_w_sd",
+                        label = "Std. Deviation (Wild)",
                         min = 0,
                         max = 10000,
                         value = 100
-                      ),
-                      plotOutput("n_w_proj", height = "100px")
+                      )
                     ),
                     card(
-                      card_header("Growth rate"),
+                      card_header("Wild growth rates"),
                       sliderInput(
                         "base_lambda_mu",
                         label = "Mean (base)",
@@ -59,9 +117,7 @@ baseline_page <- layout_sidebar(
                         max = 1,
                         value = .1,
                         step = 0.01
-                      ),
-                      plotOutput("lambda_proj", height = "100px")
-                    ),
+                      )),
                     card(
                       card_header("Probability of flu"),
                       numericInput("t1_flu",
@@ -130,170 +186,50 @@ baseline_page <- layout_sidebar(
                                    min = 0,
                                    max = 1
                       ),
-                    )
-  ),
-  card(
-    card_header("Simulated populations"),
-    actionButton("sim_button", "Run simulation"),
-    card(
-      plotOutput("baseline_sims")
-    ),
-    value_box(
-      title = "Proportion of simulations where population persists:",
-      value = textOutput("baseline_survival"),
-      theme = "primary"
-    ),
-  )
-)
-
-translocation_page <- layout_sidebar(
-  sidebar = sidebar(title = "Set Parameters",
-                    width = 500,
+                    ),
+                    conditionalPanel(
+                      "input.nav === 'Baseline simulations'",
+                      card(
+                        card_header("Estimated initial population"),
+                        plotOutput("n_w_proj", height = "100px")
+                      ),
+                      card(
+                        card_header("Estimated wild growth rates"),
+                        plotOutput("lambda_proj", height = "100px")
+                      ),
+                    ),
+                  conditionalPanel(
+                    "['Translocation simulations', 'Translocation optimisation'].includes(input.nav)",
                     card(
-                      card_header("Initial population"),
+                      card_header("Initial captive population"),
                       sliderInput(
-                        "n_0_mu2",
-                        label = " Mean (Wild)",
-                        min = 0,
-                        max = 10000,
-                        value = 1000
-                      ),
-                      sliderInput(
-                        "n_0_sd2",
-                        label = "Std. Deviation (Wild)",
-                        min = 0,
-                        max = 10000,
-                        value = 100
-                      ),
-                      sliderInput(
-                        "n_0_c2",
+                        "n_0_c",
                         label = "Captive",
                         min = 0,
                         max = 10000,
                         value = 0
                       ),
                       plotOutput("n_proj2", height = "100px")),
-                      card(
-                        card_header("Growth rate"),
-                        sliderInput(
-                          "base_lambda_mu2",
-                          label = "Mean (base)",
-                          min = 0,
-                          max = 3,
-                          value = 1,
-                          step = 0.01
-                        ),
-                        sliderInput(
-                          "base_lambda_sd2",
-                          label = "Std. Deviation (base)",
-                          min = 0,
-                          max = 1,
-                          value = .1,
-                          step = 0.01
-                        ),
-                        sliderInput(
-                          "flu_lambda_mu2",
-                          label = "Mean (flu)",
-                          min = 0,
-                          max = 3,
-                          value = 0.6, 
-                          step = 0.01
-                        ),
-                        sliderInput(
-                          "flu_lambda_sd2",
-                          label = "Std. Deviation (flu)",
-                          min = 0,
-                          max = 1,
-                          value = .1,
-                          step = 0.01
-                        ),
-                        sliderInput(
-                          "captive_lambda_mu2",
-                          label = "Mean (captive)",
-                          min = 0,
-                          max = 3,
-                          value = 0.9, 
-                          step = 0.01
-                        ),
-                        sliderInput(
-                          "captive_lambda_sd2",
-                          label = "Std. Deviation (captive)",
-                          min = 0,
-                          max = 1,
-                          value = 0.1,
-                          step = 0.01
-                        ),
-                        plotOutput("lambda_proj2", height = "100px")
+                    card(
+                      card_header("Captive growth rate"),
+                      sliderInput(
+                        "captive_lambda_mu",
+                        label = "Mean (captive)",
+                        min = 0,
+                        max = 3,
+                        value = 0.9, 
+                        step = 0.01
                       ),
-                      card(
-                        card_header("Probability of flu"),
-                        numericInput("t1_flu2",
-                                     "t=1",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t2_flu2",
-                                     "t=2",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t3_flu2",
-                                     "t=3",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t4_flu2",
-                                     "t=4",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t5_flu2",
-                                     "t=5",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t6_flu2",
-                                     "t=6",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t6_flu2",
-                                     "t=6",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t6_flu2",
-                                     "t=6",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t7_flu2",
-                                     "t=7",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t8_flu2",
-                                     "t=8",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        ),
-                        numericInput("t9_flu2",
-                                     "t=9",
-                                     value = 0.3,
-                                     min = 0,
-                                     max = 1
-                        )
-                        ),
+                      sliderInput(
+                        "captive_lambda_sd",
+                        label = "Std. Deviation (captive)",
+                        min = 0,
+                        max = 1,
+                        value = 0.1,
+                        step = 0.01
+                      ),
+                      plotOutput("lambda_proj2", height = "100px")
+                    ),
                     card(
                       card_header("Translocation success rates"),
                       sliderInput(
@@ -440,39 +376,19 @@ translocation_page <- layout_sidebar(
                                   max = 1,
                                   value = 0,
                                   step = 0.01)
-                    )),
-  card(
-    card_header("Simulated translocations"),
-    actionButton("sim_translocations", "Run simulation"),
-    card(
-      plotOutput("translocate_sims")
-    ),
-    card(
-      plotOutput("translocate_sims_base")
-    ),
-    value_box(
-      title = "Proportion of simulations where population persists (with translocations):",
-      value = textOutput("translocate_survival"),
-      theme = "primary"
-    ),
-    value_box(
-      title = "Proportion of simulations where population persists (no translocations):",
-      value = textOutput("translocate_survival_base"),
-      theme = "secondary"
-    ),
-  )
-  )
-
-
-# Define UI for application that draws a histogram
-ui <- page_navbar(theme = bs_theme(preset = "superhero"),
-  title = "H5N1 Simulator",
-  nav_panel(
-    "Baseline simulations",
-    baseline_page
-  ), 
-  nav_panel(
-    "Translocation simulations",
-    translocation_page
-  )
+                    )
+                  )
+),
+nav_panel(
+  "Baseline simulations",
+  baseline_page
+), 
+nav_panel(
+  "Translocation simulations",
+  translocation_page
+),
+nav_panel(
+  "Translocation optimisation",
+  optimisation_page
+)
 )
