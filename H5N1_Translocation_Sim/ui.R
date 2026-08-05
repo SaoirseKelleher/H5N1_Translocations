@@ -146,6 +146,43 @@ baseline_page <- layout_sidebar(
   )
 )
 
+translocation_page <- layout_sidebar(
+  sidebar = sidebar(title = "Set Parameters",
+                    width = 500,
+                    card(
+                      card_header("Initial population"),
+                      sliderInput(
+                        "n_0_w_mu",
+                        label = " Mean (Wild)",
+                        min = 0,
+                        max = 10000,
+                        value = 1000
+                      ),
+                      sliderInput(
+                        "n_0_w_sd",
+                        label = "Std. Deviation (Wild)",
+                        min = 0,
+                        max = 10000,
+                        value = 100
+                      ),
+                      sliderInput(
+                        "n_0_c",
+                        label = "Captive",
+                        min = 0,
+                        max = 10000,
+                        value = 0
+                      )
+                    )),
+  card(
+    card_header("Optimised action"),
+    actionButton("optimise_button", "Optimise"),
+    card(
+      "Placeholder"
+    )
+  )
+  )
+
+
 # Define UI for application that draws a histogram
 ui <- page_navbar(theme = bs_theme(preset = "superhero"),
   title = "H5N1 Simulator",
@@ -154,6 +191,7 @@ ui <- page_navbar(theme = bs_theme(preset = "superhero"),
     baseline_page
   ), 
   nav_panel(
-    "Translocation optimisation"
+    "Translocation optimisation",
+    translocation_page
   )
 )
