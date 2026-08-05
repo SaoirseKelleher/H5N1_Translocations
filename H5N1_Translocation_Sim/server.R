@@ -97,7 +97,7 @@ function(input, output, session) {
         scale_colour_manual("",
                             limits = c("basepr", "flupr"),
                             labels = c("Base", "Flu"),
-                            values = c("gray40", "firebrick")) +
+                            values = c("gray40", "sienna2")) +
         theme_minimal() +
         theme(axis.text.y = element_blank(), axis.title = element_blank())
       
