@@ -1,8 +1,11 @@
 # Server logic for H5N1 simulator
 
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 library(shiny)
-library(ggtext)
+library(stringr)
+library(readr)
 library(truncnorm)
 library(cmdstanr)
 
@@ -196,9 +199,8 @@ simulate_translocation <- function(model_data, nreps){
     scale_y_log10() +
     scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
     labs(x = "Timestep", y = "Population", 
-         title = "<span style='color: orange;'>Wild</span> and <span style='color: green;'>captive</span> populations") +
-    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15),
-          plot.title = element_markdown())
+         title = "Wild (orange) and captive (green) populations") +
+    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15))
   
   base_plot <- ggplot() +
     geom_line(data = all_data,
@@ -209,8 +211,7 @@ simulate_translocation <- function(model_data, nreps){
     scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
     labs(x = "Timestep", y = "Population", 
          title = "Baseline projection") +
-    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15),
-          plot.title = element_markdown())
+    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15))
   
   survival <- all_data |>
     filter(t == 10) |>
@@ -399,9 +400,8 @@ optimise_params <- function(model_data, stanModel, noptreps, nsimreps, updatePro
     scale_y_log10() +
     scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
     labs(x = "Timestep", y = "Population", 
-         title = "<span style='color: orange;'>Wild</span> and <span style='color: green;'>captive</span> populations") +
-    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15),
-          plot.title = element_markdown())
+         title = "Wild (orange) and captive (green) populations") +
+    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15))
   
   base_plot <- ggplot() +
     geom_line(data = all_data,
