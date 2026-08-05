@@ -174,8 +174,8 @@ translocation_page <- layout_sidebar(
                       )
                     )),
   card(
-    card_header("Optimised action"),
-    actionButton("optimise_button", "Optimise"),
+    card_header("Simulate translocations"),
+    actionButton("sim_translocations", "Simulate"),
     card(
       "Placeholder"
     )
@@ -191,7 +191,7 @@ ui <- page_navbar(theme = bs_theme(preset = "superhero"),
     baseline_page
   ), 
   nav_panel(
-    "Translocation optimisation",
+    "Translocation simulations",
     translocation_page
   )
 )
