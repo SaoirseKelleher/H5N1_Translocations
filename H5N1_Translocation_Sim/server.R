@@ -412,8 +412,7 @@ optimise_params <- function(model_data, stanModel, noptreps, nsimreps, updatePro
     scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
     labs(x = "Timestep", y = "Population", 
          title = "Baseline projection") +
-    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15),
-          plot.title = element_markdown())
+    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15))
   
   survival <- all_data |>
     filter(t == 10) |>
