@@ -232,7 +232,7 @@ simulate_translocation <- function(model_data, nreps){
   return(outList)
 }
 
-optimise_params <- function(model_data, stanModel, noptreps, nsimreps){
+optimise_params <- function(model_data, stanModel, noptreps, nsimreps, updateProgress){
   
   all_data <- data.frame()
   for (i in 1:noptreps){
@@ -293,6 +293,7 @@ optimise_params <- function(model_data, stanModel, noptreps, nsimreps){
       mutate(id = i) 
     all_data <- bind_rows(rowSummary, all_data)
     })
+    updateProgress(detail = paste0(as.character(i), "/1000"))
   }
   
   outPlot <- all_data |>
@@ -364,7 +365,6 @@ optimise_params <- function(model_data, stanModel, noptreps, nsimreps){
         row_data$n_base[row_data$t==t] <- 0
       }
     }
-    
     all_data <- rbind(all_data, row_data)
   }
   
@@ -614,6 +614,7 @@ function(input, output, session) {
     output$translocate_survival_base <- renderText(translocate_sims()$base_survival)
     
     optimised <- reactive({
+    
       input$run_optimiser
       
       model_data <- list(
@@ -636,7 +637,26 @@ function(input, output, session) {
                    input$t9_flu)
       )
       
-      output <- optimise_params(model_data, optimise_model_compiled, noptreps = 1000, nsimreps = 10000) 
+      # Create a Progress object
+      progress <- shiny::Progress$new()
+      progress$set(message = "Optimising...", value = 0)
+      # Close the progress when this reactive exits (even if there's an error)
+      on.exit(progress$close())
+      
+      # Create a callback function to update progress.
+      # Each time this is called:
+      # - If `value` is NULL, it will move the progress bar 1/5 of the remaining
+      #   distance. If non-NULL, it will set the progress to that value.
+      # - It also accepts optional detail text.
+      updateProgress <- function(value = NULL, detail = NULL) {
+        if (is.null(value)) {
+          value <- progress$getValue()
+          value <- value + (progress$getMax() - value) / 5
+        }
+        progress$set(value = value, detail = detail)
+      }
+      
+      output <- optimise_params(model_data, optimise_model_compiled, noptreps = 1000, nsimreps = 10000, updateProgress) 
       
       return(output)
     }) |>
