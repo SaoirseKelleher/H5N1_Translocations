@@ -5,7 +5,7 @@ library(shiny)
 library(cmdstanr)
 
 # Function to make predictions
-plot_baseline <- function(model_data, nreps){
+simulate_baseline <- function(model_data, nreps){
   all_data <- data.frame()
   for (i in 1:nreps){
     n0 <- rnorm(1,
@@ -29,7 +29,7 @@ plot_baseline <- function(model_data, nreps){
       row_data$n[row_data$t==t] <- row_data$n[row_data$t==t-1]*base_lambdaw*(1-flu[t-1])+
         row_data$n[row_data$t==t-1]*flu_lambdaw*(flu[t-1])
       
-      if (row_data$n[row_data$t==t] <= 0){
+      if (row_data$n[row_data$t==t] <= 10){
         row_data$n[row_data$t==t] <- 0
       }
     }
@@ -37,52 +37,32 @@ plot_baseline <- function(model_data, nreps){
     all_data <- rbind(all_data, row_data)
   }
   
-  all_data |>
-    ggplot(aes(x = t, y = n, group = i)) +
-    geom_line(alpha = 0.1)
-}
-get_baseline_surv <- function(model_data, nreps){
-  all_data <- data.frame()
-  for (i in 1:nreps){
-    n0 <- rnorm(1,
-                mean = model_data$n_0_mu, 
-                sd = model_data$n_0_sd)
-    base_lambdaw <- rnorm(1,
-                          mean = model_data$mu_base_lambdaw,
-                          sd = model_data$sd_base_lambdaw)
-    flu_lambdaw <- rnorm(1,
-                         mean = model_data$mu_flu_lambdaw,
-                         sd = model_data$sd_flu_lambdaw)
-    flu<-vector()
-    for (t in 1:9){
-      flu[t] <- as.numeric(runif(1,0,1) < model_data[["pr_flu"]][t])
-    }
-    row_data <- data.frame(i = i,
-                           t = 1:10, 
-                           n = NA)
-    row_data[row_data$t == 1, "n"] <- n0
-    for (t in 2:10){
-      row_data$n[row_data$t==t] <- row_data$n[row_data$t==t-1]*base_lambdaw*(1-flu[t-1])+
-        row_data$n[row_data$t==t-1]*flu_lambdaw*(flu[t-1])
-      
-      if (row_data$n[row_data$t==t] <= 0){
-        row_data$n[row_data$t==t] <- 0
-      }
-    }
-    
-    all_data <- rbind(all_data, row_data)
-  }
+  avg_trend <- all_data |>
+    summarise(n = mean(n), .by = t)
   
-  outSurv <- all_data |>
+  plot <- all_data |>
+    ggplot(aes(x = t, y = n)) +
+    geom_line(aes(group = i), alpha = 0.05, colour = "gray20", linewidth = 1) +
+    geom_line(data = avg_trend, colour = "sienna2", linewidth = 2) +
+    scale_y_log10() +
+    scale_x_continuous(breaks = c(0, 2, 4, 6, 8, 10)) +
+    labs(x = "Timestep", y = "Population") +
+    theme(axis.text = element_text(size = 12), axis.title = element_text(size = 15))
+  
+  survival <- all_data |>
     filter(t == 10) |>
-    mutate(surv = n > 0) |>
-    pull(surv)
+    mutate(surv = n >= 10) |>
+    pull(surv) |>
+    sum()/nreps
   
-  sum(outSurv)/nreps
-    
+  outList <- list(plot = plot,
+                  survival = survival)
+  
+  return(outList)
 }
 
-# Define server logic required to draw a histogram
+
+# Define server logic
 function(input, output, session) {
 
     output$n_w_proj <- renderPlot({
@@ -91,7 +71,7 @@ function(input, output, session) {
         mutate(pr = dnorm(x, mean = input$n_0_mu, sd = input$n_0_sd)) |>
         filter(x > 0) |>
         ggplot(aes(x = x, y = pr)) +
-        geom_line(colour = "cadetblue4", 
+        geom_line(colour = "gray40", 
                   alpha = 0.5, linewidth = 3) +
         theme_minimal() +
         theme(axis.text.y = element_blank(), axis.title = element_blank())
@@ -117,14 +97,13 @@ function(input, output, session) {
         scale_colour_manual("",
                             limits = c("basepr", "flupr"),
                             labels = c("Base", "Flu"),
-                            values = c("cadetblue4", "firebrick")) +
+                            values = c("gray40", "firebrick")) +
         theme_minimal() +
         theme(axis.text.y = element_blank(), axis.title = element_blank())
       
     })
     
-    output$baseline_sims <- renderPlot({
-      
+    baseline_sims <- reactive({
       input$sim_button
       
       model_data <- list(
@@ -134,32 +113,18 @@ function(input, output, session) {
         mu_base_lambdaw = input$base_lambda_mu,
         sd_base_lambdaw = input$base_lambda_sd,
         mu_flu_lambdaw = input$flu_lambda_mu,
-        sd_flu_lambdaw = input$flu_lambda_mu,
+        sd_flu_lambdaw = input$flu_lambda_sd,
         pr_flu = c(input$t1_flu, input$t2_flu, input$t3_flu, input$t4_flu,
                    input$t5_flu, input$t6_flu, input$t7_flu, input$t8_flu,
                    input$t9_flu)
       )
-      plot_baseline(model_data, nreps = 1000)
+       
+      output <- simulate_baseline(model_data, nreps = 1000) 
+      
+      return(output)
     }) |>
       bindEvent(input$sim_button)
     
-    output$baseline_survival <- renderText({
-      
-      input$sim_button
-      
-      model_data <- list(
-        nTimesteps = 10,
-        n_0_mu = input$n_0_mu,
-        n_0_sd = input$n_0_sd,
-        mu_base_lambdaw = input$base_lambda_mu,
-        sd_base_lambdaw = input$base_lambda_sd,
-        mu_flu_lambdaw = input$flu_lambda_mu,
-        sd_flu_lambdaw = input$flu_lambda_mu,
-        pr_flu = c(input$t1_flu, input$t2_flu, input$t3_flu, input$t4_flu,
-                   input$t5_flu, input$t6_flu, input$t7_flu, input$t8_flu,
-                   input$t9_flu)
-      )
-      get_baseline_surv(model_data, nreps = 1000)
-    }) |>
-      bindEvent(input$sim_button)
+    output$baseline_sims <- renderPlot(baseline_sims()$plot)
+    output$baseline_survival <- renderText(baseline_sims()$survival)
 }

@@ -2,10 +2,12 @@
 
 library(shiny)
 library(bslib)
+library(shinythemes)
 
 # Baseline page
 baseline_page <- layout_sidebar(
   sidebar = sidebar(title = "Set Parameters",
+                    width = 500,
                     card(
                       card_header("Initial population"),
                       sliderInput(
@@ -137,15 +139,15 @@ baseline_page <- layout_sidebar(
       plotOutput("baseline_sims")
     ),
     value_box(
-      title = "Survival rate",
+      title = "Proportion of simulations where population persists:",
       value = textOutput("baseline_survival"),
-      theme = "teal"
+      theme = "primary"
     ),
   )
 )
 
 # Define UI for application that draws a histogram
-ui <- page_navbar(
+ui <- page_navbar(theme = bs_theme(preset = "superhero"),
   title = "H5N1 Simulator",
   nav_panel(
     "Baseline simulations",
