@@ -2,7 +2,6 @@
 
 library(tidyverse)
 library(shiny)
-#library(cmdstanr)
 library(ggtext)
 
 # Function to make predictions
