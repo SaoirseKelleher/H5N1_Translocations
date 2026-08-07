@@ -2,30 +2,30 @@ simulate_translocation <- function(model_data, nreps){
   all_data <- data.frame()
   for (i in 1:nreps){
     n0_w <- rtruncnorm(1,
-                  mean = model_data$n_0_mu, 
-                  sd = model_data$n_0_sd,
-                  a = 0, b = 1)
+                       mean = model_data$n_0_mu, 
+                       sd = model_data$n_0_sd,
+                       a = 0, b = Inf)
     n0_c <- model_data$n_0_c
-    base_lambdaw <- rnorm(1,
-                          mean = model_data$mu_base_lambdaw,
-                          sd = model_data$sd_base_lambdaw,
+    base_lambdaw <- rtruncnorm(1,
+                               mean = model_data$mu_base_lambdaw,
+                               sd = model_data$sd_base_lambdaw,
+                               a = 0, b = 1)
+    flu_lambdaw <- rtruncnorm(1,
+                              mean = model_data$mu_flu_lambdaw,
+                              sd = model_data$sd_flu_lambdaw,
+                              a = 0, b = 1)
+    lambdac <- rtruncnorm(1,
+                          mean = model_data$captive_lambda_mu,
+                          sd = model_data$captive_lambda_sd,
                           a = 0, b = 1)
-    flu_lambdaw <- rnorm(1,
-                         mean = model_data$mu_flu_lambdaw,
-                         sd = model_data$sd_flu_lambdaw,
-                         a = 0, b = 1)
-    lambdac <- rnorm(1,
-                     mean = model_data$captive_lambda_mu,
-                     sd = model_data$captive_lambda_sd,
-                     a = 0, b = 1)
-    phi <- rnorm(1,
-                 mean = model_data$phi_mu,
-                 sd = model_data$phi_sd,
-                 a = 0, b = 1)
-    psi <- rnorm(1,
-                 mean = model_data$psi_mu,
-                 sd = model_data$psi_sd,
-                 a = 0, b = 1)
+    phi <- rtruncnorm(1,
+                      mean = model_data$phi_mu,
+                      sd = model_data$phi_sd,
+                      a = 0, b = 1)
+    psi <- rtruncnorm(1,
+                      mean = model_data$psi_mu,
+                      sd = model_data$psi_sd,
+                      a = 0, b = 1)
     flu<-vector()
     for (t in 1:9){
       flu[t] <- as.numeric(runif(1,0,1) < model_data[["pr_flu"]][t])
