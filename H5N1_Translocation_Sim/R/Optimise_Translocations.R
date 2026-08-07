@@ -13,8 +13,8 @@ data {
   real<lower=0> base_lambdaw;
   real<lower=0> flu_lambdaw;
   real<lower=0> lambdac;
-  real<lower=0.001, upper=0.999> phi;
-  real<lower=0.001, upper=0.999> psi;
+  real<lower=0, upper=1> phi;
+  real<lower=0, upper=1> psi;
   array[nTimesteps-1] int<lower=0, upper=1> flu;
 }
 
