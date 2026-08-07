@@ -1,10 +1,8 @@
 # UI for H5N1 shiny app
-
 library(shiny)
 library(bslib)
-library(shinythemes)
 
-# Baseline page
+# Page 1 - Baselines
 baseline_page <- card(
   card_header("Simulated populations"),
   actionButton("sim_button", "Run simulation"),
@@ -18,6 +16,8 @@ baseline_page <- card(
   ),
 )
 
+
+# Page 2 - translocations
 translocation_page <- card(
   card_header("Simulated translocations"),
   actionButton("sim_translocations", "Run simulation"),
@@ -39,6 +39,7 @@ translocation_page <- card(
   ),
 )
 
+# Page 3 - optimisations
 optimisation_page <- card(
   card_header("Optimise"),
   actionButton("run_optimiser", "Run optimisation"),
@@ -146,18 +147,6 @@ ui <- page_navbar(theme = bs_theme(preset = "superhero"),
                       ),
                       numericInput("t5_flu",
                                    "t=5",
-                                   value = 0.3,
-                                   min = 0,
-                                   max = 1
-                      ),
-                      numericInput("t6_flu",
-                                   "t=6",
-                                   value = 0.3,
-                                   min = 0,
-                                   max = 1
-                      ),
-                      numericInput("t6_flu",
-                                   "t=6",
                                    value = 0.3,
                                    min = 0,
                                    max = 1
