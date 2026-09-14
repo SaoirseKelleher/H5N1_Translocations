@@ -1,0 +1,48 @@
+---
+title: "TranslocationModel"
+format: html
+---
+
+```{r Packages}
+library(tidyverse)
+library(rstan)
+```
+
+```{r DefineModel}
+optimise_model <- "
+data {
+  int<lower=0> nTimesteps;
+  real<lower=1> N0w;
+  real<lower=0> N0c;
+  real<lower=0> base_lambdaw;
+  real<lower=0> flu_lambdaw;
+  real<lower=0> lambdac;
+  real<lower=0, upper=1> phi;
+  real<lower=0, upper=1> psi;
+  array[nTimesteps-1] int<lower=0, upper=1> flu;
+}
+
+parameters {
+  array[nTimesteps-1] real<lower=0, upper=1> gamma;
+  array[nTimesteps-1] real<lower=0, upper=1> epsilon;
+}
+
+model {
+  vector[nTimesteps] Nw;
+  vector[nTimesteps] Nc;
+  
+  Nw[1] = N0w;
+  Nc[1] = N0c;
+  for (t in 2:nTimesteps){
+    Nw[t] = (Nw[t-1]*flu[t-1]*flu_lambdaw*(1-epsilon[t-1]))+
+    (Nw[t-1]*(1-flu[t-1])*base_lambdaw*(1-epsilon[t-1]))+
+    (Nc[t-1]*(gamma[t-1])*lambdac*psi);
+    Nc[t] = (Nc[t-1]*(1-gamma[t-1])*lambdac)+
+    (Nw[t-1]*flu[t-1]*flu_lambdaw*epsilon[t-1]*phi)+
+    (Nw[t-1]*(1-flu[t-1])*base_lambdaw*epsilon[t-1]*phi);
+  }
+  
+  target += Nw[nTimesteps];
+}
+"
+```
