@@ -1,6 +1,7 @@
 ---
 title: "TranslocationModel"
 format: html
+embed-resources: True
 ---
 
 ```{r Packages}
@@ -9,7 +10,7 @@ library(rstan)
 ```
 
 ```{r DefineModel}
-optimise_model <- "
+translocation_model <- "
 data {
   int<lower=0> nTimesteps;
   real<lower=1> N0w;
@@ -46,3 +47,10 @@ model {
 }
 "
 ```
+
+
+
+
+
+
+
