@@ -283,6 +283,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   }
  
   sdp_Output <- list(D = D,
+                     transitions_pop = transitions_pop,
                      arguments = list(fecundity_w = fecundity_w, 
                                       fecundity_c = fecundity_c, 
                                       breeding_month = breeding_month,

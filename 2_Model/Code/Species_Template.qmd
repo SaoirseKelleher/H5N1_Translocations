@@ -83,6 +83,6 @@ sdp_output <- run_SDP(fecundity_w = fecundity_w,
 ## Save outputs
 
 ```{r SaveOutputs}
-write_rds(paste0("2_Model/Outputs/Species/", species_name, ".rds"),
-          sdp_output)
+write_rds(sdp_output,
+          paste0("2_Model/Outputs/Species/", species_name, ".rds"))
 ```
