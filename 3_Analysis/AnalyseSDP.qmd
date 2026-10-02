@@ -1,0 +1,154 @@
+---
+title: "SDP_Simulate"
+format: html
+---
+
+```{r Packages}
+library(tidyverse)
+library(scico)
+library(patchwork)
+library(LaplacesDemon)
+```
+
+```{r LoadData}
+swpa_model <- read_rds("2_Model/Outputs/Species/Swift Parrot.rds")
+D <- swpa_model$D
+transitions_pop <- swpa_model$transitions_pop
+transitions_disease <- swpa_model$arguments$disease_transitions
+```
+
+```{r StateSpace}
+state_space <- expand.grid(Nw = 1:21,
+                           Nc = 1:21,
+                           Exposure = 1:6) |>
+  mutate(Action = NA)
+
+for (i in 1:nrow(state_space)){
+  state_space$Action[i] <- D[state_space$Nw[i],
+                             state_space$Nc[i],
+                             state_space$Exposure[i],
+                             1]
+}
+
+
+state_space |>
+  ggplot(aes(x = Nc, y = Nw, fill = Action)) +
+  geom_tile() + 
+  facet_wrap(vars(Exposure)) +
+  scale_fill_scico(palette = 'vik', midpoint = 0)
+```
+
+```{r Simulate flu}
+timesteps <- swpa_model$arguments$Tmax
+fluDf <- data.frame(timestep = 1:timesteps,
+                    fluState = NA)
+fluDf$fluState[1] <- 4
+for (t in 2:timesteps){
+  fluDf$fluState[t] <- rcat(1, transitions_disease[fluDf$fluState[t-1],])
+}
+
+flu_plot <- fluDf |> 
+  ggplot(aes(x = timestep, y = fluState)) +
+  geom_line(colour = "gray60") +
+  geom_point(aes(colour = fct(as.character(fluState)))) +
+  scale_colour_manual(limits = c("1","2","3","4","5","6"),
+                      values = c("gray80", rep("goldenrod2",4), "indianred4"))
+```
+
+```{r Simulate decisions}
+Tmonths <- rep_len(c(swpa_model$arguments$breeding_month:12,
+                     1:(swpa_model$arguments$breeding_month-1)),
+                   length.out = swpa_model$arguments$Tmax)
+timesteps_months <- Tmonths[1:timesteps]
+actions <- seq(-100, 100, by = 10)
+
+phi_wc <- swpa_model$arguments$phi_wc
+establish_cost <- swpa_model$arguments$establish_cost
+captive_cost <- swpa_model$arguments$captive_cost
+cw_translocate_cost <- swpa_model$arguments$cw_translocate_cost
+wc_translocate_cost <- swpa_model$arguments$wc_translocate_cost
+
+get_cost <- function(lastWildPop, 
+                     lastCaptivePop, 
+                     action){
+  
+  tau_cw <- ifelse(action > 0, action, 0)/100
+  tau_wc <- ifelse(action < 0, abs(action), 0)/100
+  
+  if (lastCaptivePop == 1 & action < 0){
+    setupCost <- establish_cost
+  } else {
+    setupCost <- 0
+  }
+
+  costUtility <- (((lastCaptivePop-1)-((lastCaptivePop-1)*(tau_cw)) +
+                     ((lastWildPop-1)*tau_wc*phi_wc))*captive_cost) +
+    (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
+    (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
+    (setupCost)
+  
+  return(costUtility)
+}
+
+popTraject <- data.frame(timestep = 1:timesteps,
+                         Nw = NA,
+                         Nc = NA,
+                         exposure = NA,
+                         month = NA,
+                         Action = NA,
+                         Cost = NA)
+popTraject[1,] <- data.frame(timestep = 1,
+                             Nw = 8, 
+                             Nc = 1, 
+                             exposure = 4,
+                             month = 8, 
+                             Action = D[8,1,4,8],
+                             Cost = get_cost(8, 1, D[8,1,4,8]))
+
+for (t in 2:timesteps){
+  popTraject$Nw[t] <- which.max(apply(transitions_pop[popTraject$Nw[t-1],
+                                      popTraject$Nc[t-1],
+                                      ,
+                                      ,
+                                      ifelse(popTraject$exposure[t-1]==6, 2, 1),
+                                      ifelse(popTraject$month[t-1]==8, 2, 1),
+                                      which(actions == popTraject$Action[t-1])],
+                                      1,
+                                      max))
+  popTraject$Nc[t] <- which(transitions_pop[popTraject$Nw[t-1],
+                                            popTraject$Nc[t-1],
+                                            popTraject$Nw[t],
+                                            ,
+                                            ifelse(popTraject$exposure[t-1]==6, 2, 1),
+                                            ifelse(popTraject$month[t-1]==8, 2, 1),
+                                            which(actions == popTraject$Action[t-1])]==1)
+  popTraject$exposure[t] <- fluDf$fluState[t]
+  popTraject$month[t] <- timesteps_months[t]
+  popTraject$Action[t] <- D[popTraject$Nw[t],
+                            popTraject$Nc[t],
+                            popTraject$exposure[t],
+                            popTraject$month[t]]
+  popTraject$Cost[t] <- get_cost(popTraject$Nw[t-1],
+                                 popTraject$Nc[t-1],
+                                 popTraject$Action[t])
+}
+
+
+pop_plot <- popTraject |>
+  pivot_longer(cols = c(Nw, Nc), names_to = "group", values_to = "pop") |>
+  mutate(pop = pop*100) |>
+  ggplot(aes(x = timestep, y = pop, fill = group)) +
+  geom_col()
+
+cost_plot <- popTraject |> 
+  mutate(Cost = cumsum(Cost)) |>
+  ggplot(aes(x = timestep, y = Cost)) +
+  geom_line(colour = "goldenrod4")
+
+action_plot <- popTraject |> 
+  ggplot(aes(x = timestep, y = Action)) +
+  geom_line()
+
+pop_plot/action_plot/flu_plot/cost_plot +
+  plot_layout(axes = "collect")
+```
