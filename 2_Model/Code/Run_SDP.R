@@ -243,7 +243,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             for (z in 1:Nstates_exposure){
               # Population transitions & disease transition are independent, can just multiply here
               W[,,z]  <- transitions_pop[w,x,,,(y==6)+1,
-                                         (z==breeding_month)+1,i]*transitions_disease[y,z]
+                                         (z==breeding_month)+1,i]*disease_transitions[y,z]
             }
             
             # Fill Q with utility - first fill each month with just the utility... 
@@ -282,5 +282,18 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     }
   }
  
-  return(D)
+  sdp_Output <- list(D = D,
+                     arguments = list(fecundity_w = fecundity_w, 
+                                      fecundity_c = fecundity_c, 
+                                      breeding_month = breeding_month,
+                                      mortality_w_base = mortality_w_base, 
+                                      mortality_w_flu = mortality_w_flu, 
+                                      mortality_c = mortality_c,
+                                      phi_wc = phi_wc, 
+                                      phi_cw = phi_cw,
+                                      disease_transitions = disease_transitions,
+                                      discount = discount,
+                                      Tmax = Tmax))
+  
+  return(sdp_Output)
 }

@@ -20,9 +20,12 @@ species_name <- "Swift Parrot"
 fecundity_w <- 1.54
 fecundity_c <- 1
 
+# Month of breeding
+breeding_month <- 8
+
 # Monthly mortality in wild without H5N1, with H5N1, and in captivity
 mortality_w_base <- 0.04
-morality_w_flu <- 0.5
+mortality_w_flu <- 0.5
 mortality_c <- 0.03
 
 # Translocation success rates (wild to captive, captive to wild)
