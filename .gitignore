@@ -1,6 +1,8 @@
 # Large data
 1_Data/Spatial/
 
+# Large files
+2_Model/Outputs/Species/*.rds
 
 # History files
 .Rhistory
