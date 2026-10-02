@@ -19,7 +19,7 @@ species_name <- "Swift Parrot"
 # Fecundity in wild and in captivity
 fecundity_w <- 1.54
 fecundity_c <- 1
-r
+
 # Month of breeding
 breeding_month <- 8
 
