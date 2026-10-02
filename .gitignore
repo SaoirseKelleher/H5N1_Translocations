@@ -3,7 +3,7 @@
 
 
 # Large files
-2_Model/Outputs/Species/**
+2_Model/Outputs/Species/
 
 # History files
 .Rhistory
