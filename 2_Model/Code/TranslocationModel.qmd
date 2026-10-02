@@ -6,26 +6,111 @@ embed-resources: True
 
 ```{r Packages}
 library(tidyverse)
+library(terra)
+library(tidyterra)
 library(rstan)
 ```
 
+```{r LoadMaps}
+swpa_range_tas <- terra::vect("1_Data/Processed/SWPA_Tassie_Range.shp")
+swpa_range_ml <- terra::vect("1_Data/Processed/SWPA_Mainland_Range.shp")
+swpa_dis_tas <- terra::rast("1_Data/Processed/SWPA_Tassie_Distance.tif")
+swpa_dis_ml <- terra::rast("1_Data/Processed/SWPA_Mainland_Distance.tif")
+```
+
+## Simulate infections
+```{r SimulateInfections}
+
+nTimesteps = 12*20
+outbreakPersist = 0.8
+outbreakSpread = 0.7
+tas_distribution = swpa_range_tas
+ml_distribution = swpa_range_ml
+tas_distance = swpa_dis_tas
+ml_distance = swpa_dis_ml
+gammaLong = 0.05
+betaGammaShort = 0.05
+
+SWPA_SimulateInfections <- function(nTimesteps, gammaLong, betaGammaShort, 
+                                    outbreakPersist,
+                                    avi_distribution,
+                                    tas_distribution, ml_distribution,
+                                    tas_distance, ml_distance, 
+                                    nSims){
+  
+  outSims <- data.frame(Timestep = 1:nTimesteps,
+                        Month = rep(c(9:12,1:8), 20)) |>
+    mutate(Outbreak = if_else(Timestep == 1, 1, NA),
+           swpa_dist = NA,
+           swpa_X = NA,
+           swpa_Y = NA)
+  
+  # Simulate whether Australia is in outbreak
+  for (t in 2:nTimesteps){
+    t_persist <- (runif(1) < outbreakPersist)
+    t_new <- (runif(1) < outbreakProb)
+    
+    outSims[t,"Outbreak"] <- as.numeric(((outSims[t-1, "Outbreak"]*t_persist)+t_new)>=1)
+  }
+  
+  # Simulate swift parrot locations
+  t_loc <- terra::spatSample(tas_distribution, size = 1)
+  outSims[1, "swpa_X"] <- as.data.frame(t_loc, geom = "XY")$x
+  outSims[1, "swpa_Y"] <- as.data.frame(t_loc, geom = "XY")$y
+  outSims[1, "swpa_dist"] <- terra::extract(tas_distance, t_loc)
+
+  for (t in 2:nTimesteps){
+    if (Month == 9){
+      t_loc <- terra::spatSample(tas_distribution, size = 1)
+      outSims[t, "swpa_X"] <- as.data.frame(t_loc, geom = "XY")$x
+      outSims[t, "swpa_Y"] <- as.data.frame(t_loc, geom = "XY")$y
+      outSims[t, "swpa_dist"] <- terra::extract(tas_distance, t_loc)
+    }
+    if (Month > 9){
+      outSims[t, "swpa_X"] <- outSims[t-1, "swpa_X"]
+      outSims[t, "swpa_Y"] <- outSims[t-1, "swpa_Y"]
+      outSims[t, "swpa_dist"] <- outSims[t-1, "swpa_dist"]
+    }
+    if (Month < 9){
+      t_loc <- terra::spatSample(ml_distribution, size = 1)
+      outSims[t, "swpa_X"] <- as.data.frame(t_loc, geom = "XY")$x
+      outSims[t, "swpa_Y"] <- as.data.frame(t_loc, geom = "XY")$y
+      outSims[t, "swpa_dist"] <- terra::extract(ml_distance, t_loc)
+    }
+  }
+  
+  ## Simulate infections
+}
+
+```
+
+
+## Optimisation model for translocations
 ```{r DefineModel}
 translocation_model <- "
 data {
   int<lower=0> nTimesteps;
   real<lower=1> N0w;
   real<lower=0> N0c;
-  real<lower=0> base_lambdaw;
-  real<lower=0> flu_lambdaw;
-  real<lower=0> lambdac;
-  real<lower=0, upper=1> phi;
-  real<lower=0, upper=1> psi;
+  real<lower=0, upper = 1> alpha_mortality_w_prob;
+  real<lower=0, upper = 1> beta_mortality_w_flu;
+  real<lower=0, upper = 1> alpha_mortality_c_prob;
+  real<lower=0> alpha_fecundity_w;
+  real<lower=0> alpha_fecundity_c;
+  real<lower=0, upper=1> phi_wc;
+  real<lower=0, upper=1> phi_cw;
+  array[nTimesteps-1] int<lower=0, upper=1> breeding;
   array[nTimesteps-1] int<lower=0, upper=1> flu;
 }
 
+transformed data {
+
+
+}
+
 parameters {
-  array[nTimesteps-1] real<lower=0, upper=1> gamma;
-  array[nTimesteps-1] real<lower=0, upper=1> epsilon;
+  array[nTimesteps-1] real<lower=0, upper=1> tau_wc;
+  array[nTimesteps-1] real<lower=0, upper=1> tau_cw;
 }
 
 model {

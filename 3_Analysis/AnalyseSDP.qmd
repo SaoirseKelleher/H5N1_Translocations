@@ -1,0 +1,119 @@
+---
+title: "SDP_Simulate"
+format: html
+---
+
+```{r Packages}
+library(tidyverse)
+library(LaplacesDemon)
+```
+
+```{r DiseaseMatrix}
+transitions_disease <- array(0, dim = c(6, 6))
+
+transitions_disease[1, 1] <- .95
+transitions_disease[1, 2] <- .04
+transitions_disease[1, 3] <- .01
+transitions_disease[2, 1] <- .1
+transitions_disease[2, 2] <- .5
+transitions_disease[2, 3] <- .25
+transitions_disease[2, 4] <- .1
+transitions_disease[2, 5] <- .05
+transitions_disease[3, 1] <- .05
+transitions_disease[3, 2] <- .05
+transitions_disease[3, 3] <- .5
+transitions_disease[3, 4] <- .25
+transitions_disease[3, 5] <- .15
+transitions_disease[3, 6] <- .05
+transitions_disease[4, 1] <- .05
+transitions_disease[4, 2] <- .05
+transitions_disease[4, 3] <- .05
+transitions_disease[4, 4] <- .5
+transitions_disease[4, 5] <- .25
+transitions_disease[4, 6] <- .10
+transitions_disease[5, 1] <- .05
+transitions_disease[5, 2] <- 0
+transitions_disease[5, 3] <- 0
+transitions_disease[5, 4] <- 0
+transitions_disease[5, 5] <- .25
+transitions_disease[5, 6] <- .7
+transitions_disease[6, 1] <- .6
+transitions_disease[6, 6] <- .4
+
+
+
+```
+
+```{r Simulate flu}
+timesteps <- 360
+fluDf <- data.frame(timestep = 1:timesteps,
+                    fluState = NA)
+fluDf$fluState[1] <- 4
+for (t in 2:timesteps){
+  fluDf$fluState[t] <- rcat(1, transitions_disease[fluDf$fluState[t-1],])
+}
+
+flu_plot <- fluDf |> 
+  ggplot(aes(x = timestep, y = fluState)) +
+  geom_line(colour = "gray60") +
+  geom_point(aes(colour = fct(as.character(fluState)))) +
+  scale_colour_manual(limits = c("1","2","3","4","5","6"),
+                      values = c("gray80", rep("goldenrod2",4), "indianred4"))
+```
+
+```{r Simulate decisions}
+timesteps_months <- Tmonths[1:timesteps]
+
+popTraject <- data.frame(timestep = 1:timesteps,
+                         Nw = NA,
+                         Nc = NA,
+                         exposure = NA,
+                         month = NA,
+                         Action = NA)
+popTraject[1,] <- data.frame(timestep = 1,
+                             Nw = 8, 
+                             Nc = 1, 
+                             exposure = 4,
+                             month = 8, 
+                             Action = D[8,1,4,8])
+
+for (t in 2:timesteps){
+  popTraject$Nw[t] <- which.max(apply(transitions_pop[popTraject$Nw[t-1],
+                                      popTraject$Nc[t-1],
+                                      ,
+                                      ,
+                                      ifelse(popTraject$exposure[t-1]==6, 2, 1),
+                                      ifelse(popTraject$month[t-1]==8, 2, 1),
+                                      which(actions == popTraject$Action[t-1])],
+                                      1,
+                                      max))
+  popTraject$Nc[t] <- which(transitions_pop[popTraject$Nw[t-1],
+                                            popTraject$Nc[t-1],
+                                            popTraject$Nw[t],
+                                            ,
+                                            ifelse(popTraject$exposure[t-1]==6, 2, 1),
+                                            ifelse(popTraject$month[t-1]==8, 2, 1),
+                                            which(actions == popTraject$Action[t-1])]==1)
+  popTraject$exposure[t] <- fluDf$fluState[t]
+  popTraject$month[t] <- timesteps_months[t]
+  popTraject$Action[t] <- D[popTraject$Nw[t],
+                            popTraject$Nc[t],
+                            popTraject$exposure[t],
+                            popTraject$month[t]]
+  
+}
+
+
+pop_plot <- popTraject |>
+  pivot_longer(cols = c(Nw, Nc), names_to = "group", values_to = "pop") |>
+  mutate(pop = pop*100) |>
+  ggplot(aes(x = timestep, y = pop, fill = group)) +
+  geom_col()
+
+action_plot <- popTraject |> 
+  ggplot(aes(x = timestep, y = Action)) +
+  geom_line()
+
+pop_plot/action_plot/flu_plot +
+  plot_layout(axes = "collect")
+```

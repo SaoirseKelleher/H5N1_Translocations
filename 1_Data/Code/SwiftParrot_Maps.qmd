@@ -1,0 +1,73 @@
+---
+title: "SwiftParrot_Maps"
+format: html
+---
+
+```{r Packages}
+library(tidyverse)
+library(terra)
+library(tidyterra)
+```
+
+```{r LoadData}
+epsb_maps <- terra::vect("1_Data/Spatial/snes_public_gdb/snes_public_gdb.gdb")
+australia <- terra::vect("1_Data/Spatial/STE_2021_AUST_SHP_GDA2020/STE_2021_AUST_GDA2020.shp")
+```
+
+```{r SwiftParrot_Maps}
+swpa_data <- epsb_maps |>
+  filter(SCIENTIFIC_NAME == "Lathamus discolor")
+```
+
+```{r Mainland_v_Tassie}
+tassie <- australia |>
+  filter(STE_NAME21 == "Tasmania")
+
+mainland <- australia |>
+  filter_out(STE_NAME21 == "Tasmania") |>
+  terra::aggregate()
+```
+
+```{r Coast distance}
+# Mainland
+mainland_raster_blank <- rast(mainland, res = 0.01)
+mainland_raster <- rasterize(mainland, mainland_raster_blank)
+mainland_reclass <- mainland_raster |>
+  terra::classify(rcl = matrix(c(1, NA),
+                               ncol = 2),
+                  others = 1)
+mainland_dist <- distance(mainland_reclass)
+
+# Tasmania
+tassie_raster_blank <- rast(tassie, res = 0.01)
+tassie_raster <- rasterize(tassie, tassie_raster_blank)
+tassie_reclass <- tassie_raster |>
+  terra::classify(rcl = matrix(c(1, NA),
+                               ncol = 2),
+                  others = 1)
+tassie_dist <- distance(tassie_reclass)
+```
+
+```{r Split swpa}
+swpa_tassie <- swpa_data |>
+  terra::crop(tassie) |>
+  filter(PRESENCE_CATEGORY == "Species or species habitat likely to occur")
+
+swpa_mainland <- swpa_data |>
+  terra::crop(mainland) |>
+  filter(PRESENCE_CATEGORY == "Species or species habitat likely to occur")
+
+terra::writeVector(swpa_tassie, "1_Data/Processed/SWPA_Tassie_Range.shp")
+terra::writeVector(swpa_mainland, "1_Data/Processed/SWPA_Mainland_Range.shp")
+```
+
+```{r Crop distance}
+tassie_swpa_distance <- tassie_dist |>
+  crop(swpa_tassie)
+
+mainland_swpa_distance <- mainland_dist |>
+  crop(swpa_mainland)
+
+terra::writeRaster(tassie_swpa_distance, "1_Data/Processed/SWPA_Tassie_Distance.tif")
+terra::writeRaster(mainland_swpa_distance, "1_Data/Processed/SWPA_Mainland_Distance.tif")
+```
