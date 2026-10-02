@@ -11,6 +11,11 @@
 #' @param disease_transitions (6*6 matrix of disease transitions)
 #' @param discount Discount rate (defaults to 0.99)
 #' @param Tmax Time horizon in months (defaults to 30 years)
+#' @param cw_translocate_cost Cost of translocating 100 individuals captive->wild
+#' @param wc_translocate_cost Cost of translocating 100 individuals wild->captive
+#' @param captive_cost Cost of maintaining 100 individuals in captivity
+#' @param establish_cost Cost of establishing a new captive population if none currently exists
+#' @param cost_weight Proportion of weight to apply to cost versus to population
 #'
 #' @returns Array of optimal decisions given current state.
 
@@ -19,7 +24,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                     phi_wc, phi_cw,
                     disease_transitions,
                     discount = 0.99,
-                    Tmax = 360){
+                    Tmax = 360,
+                    cw_translocate_cost,
+                    wc_translocate_cost,
+                    captive_cost,
+                    establish_cost,
+                    cost_weight){
 
   # Define states -----------------------------------------------------------
   # Define the states in the model. There are four dimensions to the state space:
@@ -100,8 +110,34 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   # Define utility function -------------------------------------------------
   # Define the value of an action given the next wild/captive populations. Here,
   # wild individuals are worth 2x captive individuals.
-  get_utility <- function(wildPop, captivePop, action) {
-    utility <- ((wildPop-1)*2)+((captivePop-1))
+  get_utility <- function(lastWildPop, lastCaptivePop, nextWildPop, nextCaptivePop, action) {
+    
+    maxPopUtility <- ((21-1)*2)+(21-1)
+    maxCost <- max(
+      c((establish_cost + 20*wc_translocate_cost),
+        (20*captive_cost),
+        (20*cw_translocate_cost))
+      )
+    
+    tau_cw <- ifelse(action > 0, action, 0)/100
+    tau_wc <- ifelse(action < 0, abs(action), 0)/100
+    
+    if (lastCaptivePop == 1 & nextCaptivePop > 1){
+      setupCost <- establish_cost
+    } else {
+      setupCost <- 0
+    }
+    
+    popUtility <- ((nextWildPop-1)*2)+((nextCaptivePop-1))
+    
+    costUtility <- (((lastCaptivePop-1)-(lastCaptivePop*(1-tau_cw)) +
+                       (lastWildPop*tau_wc*phi_wc))*captive_cost) +
+      (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
+      (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
+      (setupCost)
+    
+    totalUtility <- ((popUtility/maxPopUtility)*(1-cost_weight)) - 
+      ((costUtility/maxCost)*cost_weight)
   }
 
   
@@ -162,24 +198,32 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             # Compute utility of action - utility uses exposure/month states rather
             # than infected/breeding states, hence the below logic to fill it fully.
             if (y == 1 & z == 1){
-              utility[w, x, 1:5, c(1:7, 9:12), i] <- get_utility(nextWildState,
+              utility[w, x, 1:5, c(1:7, 9:12), i] <- get_utility(w,
+                                                                 x,
+                                                                 nextWildState,
                                                                  nextCaptiveState,
-                                                                 i)
+                                                                 actions[i])
             }
             if (y == 1 & z == 2){
-              utility[w, x, 1:5, 8, i] <- get_utility(nextWildState,
+              utility[w, x, 1:5, 8, i] <- get_utility(w,
+                                                      x,
+                                                      nextWildState,
                                                       nextCaptiveState,
-                                                      i)
+                                                      actions[i])
             }
             if (y == 2 & z == 1){
-              utility[w, x, 6, c(1:7, 9:12), i] <- get_utility(nextWildState,
+              utility[w, x, 6, c(1:7, 9:12), i] <- get_utility(w,
+                                                               x,
+                                                               nextWildState,
                                                                nextCaptiveState,
-                                                               i)
+                                                               actions[i])
             }
             if (y == 2 & z == 2){
-              utility[w, x, 6, 8, i] <- get_utility(nextWildState,
+              utility[w, x, 6, 8, i] <- get_utility(w,
+                                                    x,
+                                                    nextWildState,
                                                     nextCaptiveState,
-                                                    i)
+                                                    actions[i])
             }
           }
         }
@@ -200,9 +244,10 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                          Nstates_exposure, 
                          Nstates_month))
   
+  # Value in the final state does not consider cost.
   for (i in 1:Nstates_nWild){
     for (j in 1:Nstates_nCaptive){
-      Vtmax[i,j,,] <- get_utility(states_nWild[i], states_nCaptive[j])
+      Vtmax[i,j,,] <- ((states_nWild[i]-1)*2) + (states_nCaptive[j]-1)
     }
   }
 
@@ -276,10 +321,6 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             # Get the action that provides the best future value. 
             # If tied, pick the one that involves the least translocation
             D[w,x,y,Tmonths[t]] <- max(actions[(which(Q[w,x,y,Tmonths[t],] == Vt[w,x,y,Tmonths[t]]))][which(abs(actions[(which(Q[w,x,y,Tmonths[t],] == Vt[w,x,y,Tmonths[t]]))])==min(abs(actions[(which(Q[w,x,y,Tmonths[t],] == Vt[w,x,y,Tmonths[t]]))])))])
-            # If future state has no value (i.e., extinction), set action to NA
-            if(Vt[w,x,y,Tmonths[t]]==0){
-              D[w,x,y,Tmonths[t]] <- NA
-            }
           }
         }
       }

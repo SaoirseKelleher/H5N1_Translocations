@@ -2,6 +2,9 @@
 1_Data/Spatial/
 
 
+# Large files
+2_Model/Outputs/Species/*
+
 # History files
 .Rhistory
 .Rapp.history

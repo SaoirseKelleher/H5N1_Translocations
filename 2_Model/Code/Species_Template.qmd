@@ -32,6 +32,17 @@ mortality_c <- 0.03
 phi_wc <- 0.9
 phi_cw <- 0.75
 
+# Cost of 100 indiviuals in captivity for 1 month
+captive_cost <- 10
+# Cost of bringing in/releasing 100 individuals
+cw_translocate_cost <- 20
+wc_translocate_cost <- 20
+# Cost of setting up captive pop if none exists
+establish_cost <- 100
+
+# Weighting of cost vs population
+cost_weight <- 0.3
+
 # Disease transition matrix: Rows are exposure at t, columns at t+1
 disease_transitions <- matrix(
   #   1      2      3      4      5      6
@@ -74,7 +85,12 @@ sdp_output <- run_SDP(fecundity_w = fecundity_w,
                       phi_cw = phi_cw, 
                       disease_transitions = disease_transitions,
                       discount = 0.99,
-                      Tmax = 360)
+                      Tmax = 60, 
+                      captive_cost = captive_cost, 
+                      establish_cost = establish_cost, 
+                      cw_translocate_cost = cw_translocate_cost,
+                      wc_translocate_cost = wc_translocate_cost,
+                      cost_weight = cost_weight)
 ```
 
 ## Save outputs

@@ -60,6 +60,7 @@ Tmonths <- rep_len(c(swpa_model$arguments$breeding_month:12,
                      1:(swpa_model$arguments$breeding_month-1)),
                    length.out = swpa_model$arguments$Tmax)
 timesteps_months <- Tmonths[1:timesteps]
+actions <- seq(-100, 100, by = 10)
 
 popTraject <- data.frame(timestep = 1:timesteps,
                          Nw = NA,
