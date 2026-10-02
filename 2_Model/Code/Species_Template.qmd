@@ -17,31 +17,31 @@ source("2_Model/Code/Run_SDP.R")
 species_name <- "Swift Parrot"
 
 # Fecundity in wild and in captivity
-fecundity_w <- 1.54
+fecundity_w <- 1.3
 fecundity_c <- 1
 
 # Month of breeding
 breeding_month <- 8
 
 # Monthly mortality in wild without H5N1, with H5N1, and in captivity
-mortality_w_base <- 0.04
+mortality_w_base <- 0.08
 mortality_w_flu <- 0.5
-mortality_c <- 0.03
+mortality_c <- 0.05
 
 # Translocation success rates (wild to captive, captive to wild)
 phi_wc <- 0.9
 phi_cw <- 0.75
 
 # Cost of 100 indiviuals in captivity for 1 month
-captive_cost <- 10
+captive_cost <- 100
 # Cost of bringing in/releasing 100 individuals
-cw_translocate_cost <- 20
-wc_translocate_cost <- 20
+cw_translocate_cost <- 200
+wc_translocate_cost <- 200
 # Cost of setting up captive pop if none exists
-establish_cost <- 100
+establish_cost <- 100000
 
 # Weighting of cost vs population
-cost_weight <- 0.3
+cost_weight <- 0.5
 
 # Disease transition matrix: Rows are exposure at t, columns at t+1
 disease_transitions <- matrix(

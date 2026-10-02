@@ -130,8 +130,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     
     popUtility <- ((nextWildPop-1)*2)+((nextCaptivePop-1))
     
-    costUtility <- (((lastCaptivePop-1)-(lastCaptivePop*(1-tau_cw)) +
-                       (lastWildPop*tau_wc*phi_wc))*captive_cost) +
+    costUtility <- (((lastCaptivePop-1)-((lastCaptivePop-1)*(tau_cw)) +
+                       ((lastWildPop-1)*tau_wc*phi_wc))*captive_cost) +
       (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
       (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
       (setupCost)
@@ -339,7 +339,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                       phi_cw = phi_cw,
                                       disease_transitions = disease_transitions,
                                       discount = discount,
-                                      Tmax = Tmax))
+                                      Tmax = Tmax,
+                                      captive_cost = captive_cost,
+                                      establish_cost = establish_cost,
+                                      cw_translocate_cost = cw_translocate_cost,
+                                      wc_translocate_cost = wc_translocate_cost,
+                                      cost_weight = cost_weight))
   
   return(sdp_Output)
 }
