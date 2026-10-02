@@ -100,7 +100,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   # Define utility function -------------------------------------------------
   # Define the value of an action given the next wild/captive populations. Here,
   # wild individuals are worth 2x captive individuals.
-  get_utility <- function(wildPop, captivePop) {
+  get_utility <- function(wildPop, captivePop, action) {
     utility <- ((wildPop-1)*2)+((captivePop-1))
   }
 
@@ -163,19 +163,23 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             # than infected/breeding states, hence the below logic to fill it fully.
             if (y == 1 & z == 1){
               utility[w, x, 1:5, c(1:7, 9:12), i] <- get_utility(nextWildState,
-                                                                 nextCaptiveState)
+                                                                 nextCaptiveState,
+                                                                 i)
             }
             if (y == 1 & z == 2){
               utility[w, x, 1:5, 8, i] <- get_utility(nextWildState,
-                                                      nextCaptiveState)
+                                                      nextCaptiveState,
+                                                      i)
             }
             if (y == 2 & z == 1){
               utility[w, x, 6, c(1:7, 9:12), i] <- get_utility(nextWildState,
-                                                               nextCaptiveState)
+                                                               nextCaptiveState,
+                                                               i)
             }
             if (y == 2 & z == 2){
               utility[w, x, 6, 8, i] <- get_utility(nextWildState,
-                                                    nextCaptiveState)
+                                                    nextCaptiveState,
+                                                    i)
             }
           }
         }
