@@ -71,7 +71,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   # Define possible actions -------------------------------------------------
   # Positive actions are translocation captive to wild, negative actions are 
   # translocation wild to captive
-  actions <- seq(-100, 100, by = 10)
+  actions <- seq(-100, 100, by = 1)
   
   # Total number of actions
   nActions <- length(actions)
@@ -171,8 +171,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
           for (i in 1:nActions){
             
             # Calculate next population given the state & action
-            nextpop <- dynamic(actualWild = states_nWild[w]-1, 
-                               actualCaptive = states_nCaptive[x]-1,
+            nextpop <- dynamic(actualWild = (states_nWild[w]-1)*100, 
+                               actualCaptive = (states_nCaptive[x]-1)*100,
                                disease = states_infected[y],
                                action = actions[i],
                                mortality_w_base = mortality_w_base, 
@@ -186,14 +186,29 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             
             # Round population projections into states. Add 1 so zero population 
             # goes into state 1.
-            nextWildState <- round(nextpop$Wild)+1
+            nextWildState <- round(nextpop$Wild/100)+1
             nextWildState <- ifelse(nextWildState>21, 21, nextWildState)
-            nextCaptiveState <- round(nextpop$Captive)+1
+            nextCaptiveState <- round(nextpop$Captive/100)+1
             nextCaptiveState <- ifelse(nextCaptiveState>21, 21, nextCaptiveState)
             
             # Set probability of next state to 1 in the matrix. All other states are 
             # 0 probability, as this part of the model is deterministic
-            transitions_pop[w, x, nextWildState, nextCaptiveState, y, z, i] <- 1
+            #transitions_pop[w, x, nextWildState, nextCaptiveState, y, z, i] <- 1
+            
+            wildMatrix <- matrix(dpois(0:20,nextWildState-1), 
+                                 nrow = 21, 
+                                 ncol = 21)
+            wildMatrix[21,] <- 1-apply(wildMatrix[1:20,], 2, sum)
+            
+            captiveMatrix <- matrix(dpois(0:20,nextCaptiveState-1), 
+                                    nrow = 21, 
+                                    ncol = 21,
+                                    byrow = TRUE)
+            captiveMatrix[,21] <- 1-apply(captiveMatrix[,1:20], 1, sum)
+            
+            nextMatrix <- wildMatrix*captiveMatrix
+
+            transitions_pop[w, x, , , y, z, i] <- nextMatrix
             
             # Compute utility of action - utility uses exposure/month states rather
             # than infected/breeding states, hence the below logic to fill it fully.
