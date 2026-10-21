@@ -18,7 +18,7 @@ transitions_disease <- swpa_model$arguments$disease_transitions
 ```
 
 ```{r StateSpace}
-state_space <- expand.grid(Nw = 1:21,
+state_space <- expand.grid(Nw = 1:41,
                            Nc = 1:21,
                            Exposure = 1:6) |>
   mutate(Action = NA)
@@ -27,14 +27,16 @@ for (i in 1:nrow(state_space)){
   state_space$Action[i] <- D[state_space$Nw[i],
                              state_space$Nc[i],
                              state_space$Exposure[i],
-                             1]
+                             8]
 }
 
-
 state_space |>
+  mutate(Nc = (Nc*50)-50,
+         Nw = (Nw*50)-50) |>
   ggplot(aes(x = Nc, y = Nw, fill = Action)) +
   geom_tile() + 
-  facet_wrap(vars(Exposure)) +
+  coord_equal() +
+  facet_wrap(vars(Exposure), ncol = 6) +
   scale_fill_scico(palette = 'vik', midpoint = 0)
 ```
 
@@ -60,7 +62,7 @@ Tmonths <- rep_len(c(swpa_model$arguments$breeding_month:12,
                      1:(swpa_model$arguments$breeding_month-1)),
                    length.out = swpa_model$arguments$Tmax)
 timesteps_months <- Tmonths[1:timesteps]
-actions <- seq(-100, 100, by = 10)
+actions <- seq(-100, 100, by = 5)
 
 phi_wc <- swpa_model$arguments$phi_wc
 establish_cost <- swpa_model$arguments$establish_cost
@@ -115,13 +117,13 @@ for (t in 2:timesteps){
                                       which(actions == popTraject$Action[t-1])],
                                       1,
                                       max))
-  popTraject$Nc[t] <- which(transitions_pop[popTraject$Nw[t-1],
+  popTraject$Nc[t] <- which.max(transitions_pop[popTraject$Nw[t-1],
                                             popTraject$Nc[t-1],
                                             popTraject$Nw[t],
                                             ,
                                             ifelse(popTraject$exposure[t-1]==6, 2, 1),
                                             ifelse(popTraject$month[t-1]==8, 2, 1),
-                                            which(actions == popTraject$Action[t-1])]==1)
+                                            which(actions == popTraject$Action[t-1])])
   popTraject$exposure[t] <- fluDf$fluState[t]
   popTraject$month[t] <- timesteps_months[t]
   popTraject$Action[t] <- D[popTraject$Nw[t],
@@ -136,7 +138,7 @@ for (t in 2:timesteps){
 
 pop_plot <- popTraject |>
   pivot_longer(cols = c(Nw, Nc), names_to = "group", values_to = "pop") |>
-  mutate(pop = pop*100) |>
+  mutate(pop = pop*50) |>
   ggplot(aes(x = timestep, y = pop, fill = group)) +
   geom_col()
 
