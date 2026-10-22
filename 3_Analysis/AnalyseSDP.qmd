@@ -77,17 +77,18 @@ get_cost <- function(lastWildPop,
   tau_cw <- ifelse(action > 0, action, 0)/100
   tau_wc <- ifelse(action < 0, abs(action), 0)/100
   
-  if (lastCaptivePop == 1 & action < 0){
+  if (lastCaptivePop == 1 & tau_wc > 0){
     setupCost <- establish_cost
   } else {
     setupCost <- 0
   }
 
   costUtility <- (((lastCaptivePop-1)-((lastCaptivePop-1)*(tau_cw)) +
-                     ((lastWildPop-1)*tau_wc*phi_wc))*captive_cost) +
+                     ((lastWildPop-1)*tau_wc))*captive_cost) +
     (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
     (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
     (setupCost)
+  
   
   return(costUtility)
 }
@@ -138,7 +139,7 @@ for (t in 2:timesteps){
 
 pop_plot <- popTraject |>
   pivot_longer(cols = c(Nw, Nc), names_to = "group", values_to = "pop") |>
-  mutate(pop = pop*50) |>
+  mutate(pop = (pop*50)-50) |>
   ggplot(aes(x = timestep, y = pop, fill = group)) +
   geom_col()
 

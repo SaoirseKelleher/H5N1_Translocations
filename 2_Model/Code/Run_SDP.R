@@ -192,12 +192,17 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             nextCaptiveState <- ifelse(nextCaptiveState>21, 21, nextCaptiveState)
             
             # Calculate probabilities of next states
-            wildMatrix <- matrix(dpois(seq(0, 2000, 50), nextpop$Wild), 
+            probDensity <- function(x, n){
+              sum(dpois(((x*50):((x*50)+49)), n))
+            }
+
+            
+            wildMatrix <- matrix(sapply(0:40, probDensity, nextpop$Wild), 
                                  nrow = 41, 
                                  ncol = 21)
             wildMatrix[41,] <- 1-apply(wildMatrix[1:40,], 2, sum)
             
-            captiveMatrix <- matrix(dpois(seq(0, 1000, 50), nextpop$Captive), 
+            captiveMatrix <- matrix(sapply(0:20, probDensity, nextpop$Captive), 
                                     nrow = 41, 
                                     ncol = 21,
                                     byrow = TRUE)
