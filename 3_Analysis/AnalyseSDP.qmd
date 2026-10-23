@@ -129,30 +129,28 @@ popTraject <- data.frame(timestep = 1:timesteps,
                          Action = NA,
                          Cost = NA)
 popTraject[1,] <- data.frame(timestep = 1,
-                             Nw = 13, 
-                             Nc = 2, 
+                             Nw = 16, 
+                             Nc = 1, 
                              exposure = 4,
                              month = 10, 
-                             Action = D[13,2,4,10],
-                             Cost = get_cost(13, 2, D[8,2,4,10]))
+                             Action = D[16,1,4,10],
+                             Cost = get_cost(16, 1, D[16,1,4,10]))
 
 for (t in 2:timesteps){
-  popTraject$Nw[t] <- which.max(apply(transitions_pop[popTraject$Nw[t-1],
-                                      popTraject$Nc[t-1],
-                                      ,
-                                      ,
-                                      ifelse(popTraject$exposure[t-1]==6, 2, 1),
-                                      ifelse(popTraject$month[t-1]==10, 2, 1),
-                                      which(actions == popTraject$Action[t-1])],
-                                      1,
-                                      max))
-  popTraject$Nc[t] <- which.max(transitions_pop[popTraject$Nw[t-1],
-                                            popTraject$Nc[t-1],
-                                            popTraject$Nw[t],
-                                            ,
-                                            ifelse(popTraject$exposure[t-1]==6, 2, 1),
-                                            ifelse(popTraject$month[t-1]==10, 2, 1),
-                                            which(actions == popTraject$Action[t-1])])
+  
+  nextPop <- rcat(n = 1,
+                  as.vector(transitions_pop[popTraject$Nw[t-1],
+                                  popTraject$Nc[t-1],
+                                  ,
+                                  ,
+                                  ifelse(popTraject$exposure[t-1]==6, 2, 1),
+                                  ifelse(popTraject$month[t-1]==10, 2, 1),
+                                  which(actions == popTraject$Action[t-1])]))
+  
+  popIndex <- arrayInd(nextPop, .dim = c(41,21))
+  
+  popTraject$Nw[t] <- popIndex[1,1]
+  popTraject$Nc[t] <- popIndex[1,2]
   
   popTraject$exposure[t] <- fluDf$fluState[t]
   popTraject$month[t] <- timesteps_months[t]

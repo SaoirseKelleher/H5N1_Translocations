@@ -17,16 +17,19 @@ source("2_Model/Code/Run_SDP.R")
 species_name <- "Swift Parrot"
 
 # Fecundity in wild and in captivity
-fecundity_w <- 1.4
-fecundity_c <- 1.5
+fecundity_w <- 1.85
+fecundity_c <- 2.3
 
 # Month of breeding
 breeding_month <- 10
 
+# Starting/current month
+start_month <- 10
+
 # Monthly mortality in wild without H5N1, with H5N1, and in captivity
-mortality_w_base <- 0.05
-mortality_w_flu <- 0.5
-mortality_c <- 0.03
+mortality_w_base <- 0.0338
+mortality_w_flu <- 0.4
+mortality_c <- 0.0058
 
 # Translocation success rates (wild to captive, captive to wild)
 phi_wc <- 0.9
@@ -45,13 +48,13 @@ cost_weight <- 0.3
 
 # Disease transition matrix: Rows are exposure at t, columns at t+1
 disease_transitions <- matrix(
-  #   1      2      3      4      5      6
-  c(0.990, 0.009, 0.001, 0.000, 0.000, 0.000,  # 1
-    0.100, 0.500, 0.250, 0.100, 0.050, 0.000,  # 2 
-    0.000, 0.050, 0.500, 0.250, 0.150, 0.050,  # 3
-    0.050, 0.050, 0.050, 0.500, 0.250, 0.100,  # 4
-    0.050, 0.000, 0.000, 0.000, 0.250, 0.700,  # 5
-    0.600, 0.000, 0.000, 0.000, 0.000, 0.400), # 6
+  #   1       2       3       4       5       6
+  c(0.9800, 0.0196, 0.0001, 0.0001, 0.0001, 0.0001,  # 1
+    0.0000, 0.8000, 0.1518, 0.0480, 0.0001, 0.0001,  # 2 
+    0.0000, 0.0000, 0.6000, 0.3000, 0.0900, 0.0100,  # 3
+    0.0000, 0.0000, 0.0000, 0.5000, 0.3000, 0.2000,  # 4
+    0.0000, 0.0000, 0.0000, 0.0000, 0.2000, 0.8000,  # 5
+    0.8000, 0.0000, 0.0000, 0.0000, 0.0000, 0.4000), # 6
   nrow = 6, 
   ncol = 6, 
   byrow = TRUE)
@@ -84,8 +87,9 @@ sdp_output <- run_SDP(fecundity_w = fecundity_w,
                       phi_wc = phi_wc,
                       phi_cw = phi_cw, 
                       disease_transitions = disease_transitions,
-                      discount = 0.99,
-                      Tmax = 360, 
+                      discount = 0.999,
+                      Tmax = 36, 
+                      start_month = start_month,
                       captive_cost = captive_cost, 
                       establish_cost = establish_cost, 
                       cw_translocate_cost = cw_translocate_cost,

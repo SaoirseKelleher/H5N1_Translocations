@@ -11,6 +11,7 @@
 #' @param disease_transitions (6*6 matrix of disease transitions)
 #' @param discount Discount rate (defaults to 0.99)
 #' @param Tmax Time horizon in months (defaults to 30 years)
+#' @param start_month First month (as number)
 #' @param cw_translocate_cost Cost of translocating 100 individuals captive->wild
 #' @param wc_translocate_cost Cost of translocating 100 individuals wild->captive
 #' @param captive_cost Cost of maintaining 100 individuals in captivity
@@ -23,8 +24,9 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                     mortality_w_base, mortality_w_flu, mortality_c,
                     phi_wc, phi_cw,
                     disease_transitions,
-                    discount = 0.99,
+                    discount = 0.999,
                     Tmax = 360,
+                    start_month,
                     cw_translocate_cost,
                     wc_translocate_cost,
                     captive_cost,
@@ -113,9 +115,33 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   # Define utility function -------------------------------------------------
   # Define the value of an action given the next wild/captive populations. Here,
   # wild individuals are worth 2x captive individuals.
-  get_utility <- function(lastWildPop, lastCaptivePop, action) {
+  get_utility <- function(lastWildPop, 
+                          lastCaptivePop, 
+                          transitions_pop,
+                          infected,
+                          breeding,
+                          action) {
     
-    maxPopUtility <- ((41-1)*2)+(21-1)
+    
+    state_util <- matrix(0,
+                         nrow = 41,
+                         ncol = 21)
+    for(w in 1:41){
+      for(x in 1:21){
+        state_util[w,x] <- ((w-1)*2)+((x-1))
+      }
+    }
+    maxPopUtility <- max(state_util)
+    
+    
+    popUtility <- state_util*transitions_pop[lastWildPop,
+                                             lastCaptivePop,
+                                             ,
+                                             ,
+                                             infected+1,
+                                             breeding+1,
+                                             which(actions==action)]
+    
     maxCost <- max(
       c((establish_cost + (40*wc_translocate_cost) + (20*captive_cost)),
         (20*captive_cost),
@@ -131,16 +157,17 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
       setupCost <- 0
     }
     
-    popUtility <- ((lastWildPop-1)*2)+((lastCaptivePop-1))
-    
+  
     costUtility <- (((lastCaptivePop-1)-((lastCaptivePop-1)*(tau_cw)) +
                        ((lastWildPop-1)*tau_wc))*captive_cost) +
       (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
       (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
       (setupCost)
     
-    totalUtility <- ((popUtility/maxPopUtility)*(1-cost_weight)) - 
+    totalUtility <- ((sum(popUtility)/maxPopUtility)*(1-cost_weight)) - 
       ((costUtility/maxCost)*cost_weight)
+    
+    return(totalUtility)
   }
 
   
@@ -163,7 +190,6 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                            Nstates_exposure,
                            Nstates_month,
                            nActions))
-  
   
   # Iterate over all possible population states
   for (w in 1:Nstates_nWild){
@@ -196,44 +222,70 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             
             # Calculate probabilities of next states
             probDensity <- function(x, n){
-              sum(dpois(((x*50):((x*50)+49)), n))
+              sum(dpois((((x*50)+1):((x*50)+50)), n))
             }
             
-            wildMatrix <- matrix(sapply(0:40, probDensity, nextpop$Wild), 
+            wildMatrix <- matrix(c(dpois(0, nextpop$Wild), 
+                                   sapply(0:38, probDensity, nextpop$Wild),
+                                   sum(dpois(3950:10000, nextpop$Wild))), 
                                  nrow = 41, 
                                  ncol = 21)
-            wildMatrix[41,] <- 1-apply(wildMatrix[1:40,], 2, sum)
             
-            captiveMatrix <- matrix(sapply(0:20, probDensity, nextpop$Captive), 
+            captiveMatrix <- matrix(c(dpois(0, nextpop$Captive), 
+                                      sapply(0:18, probDensity, nextpop$Captive),
+                                      sum(dpois(1950:10000, nextpop$Captive))), 
                                     nrow = 41, 
                                     ncol = 21,
                                     byrow = TRUE)
-            captiveMatrix[,21] <- 1-apply(captiveMatrix[,1:20], 1, sum)
             
             nextMatrix <- wildMatrix*captiveMatrix
 
             transitions_pop[w, x, , , y, z, i] <- nextMatrix
-            
+          }
+        }
+      }
+    }
+  }
+  
+  # Fill utility matrix
+  for (w in 1:Nstates_nWild){
+    for (x in 1:Nstates_nCaptive){
+      for (y in 1:Nstates_infected){
+        for (z in 1:Nstates_breeding){
+          # And possible actions
+          for (i in 1:nActions){
             # Compute utility of action - utility uses exposure/month states rather
             # than infected/breeding states, hence the below logic to fill it fully.
             if (y == 1 & z == 1){
               utility[w, x, 1:5, nonbreeding_months, i] <- get_utility(w,
                                                                        x,
+                                                                       transitions_pop,
+                                                                       FALSE,
+                                                                       FALSE,
                                                                        actions[i])
             }
             if (y == 1 & z == 2){
               utility[w, x, 1:5, breeding_month, i] <- get_utility(w,
                                                                    x,
+                                                                   transitions_pop,
+                                                                   FALSE,
+                                                                   TRUE,
                                                                    actions[i])
             }
             if (y == 2 & z == 1){
               utility[w, x, 6, nonbreeding_months, i] <- get_utility(w,
                                                                      x,
+                                                                     transitions_pop,
+                                                                     TRUE,
+                                                                     FALSE,
                                                                      actions[i])
             }
             if (y == 2 & z == 2){
               utility[w, x, 6, breeding_month, i] <- get_utility(w,
                                                                  x,
+                                                                 transitions_pop,
+                                                                 TRUE,
+                                                                 TRUE,
                                                                  actions[i])
             }
           }
@@ -242,9 +294,10 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     }
   }
   
+          
 
   # Assign months to each timestep based on breeding month ------------------
-  Tmonths <- rep_len(c(breeding_month:12,1:(breeding_month-1)),
+  Tmonths <- rep_len(c(start_month:12,1:(start_month-1)),
                      length.out = Tmax)
   
   # Solve Bellman via backwards iteration -----------------------------------
