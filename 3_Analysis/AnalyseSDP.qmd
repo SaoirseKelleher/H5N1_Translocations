@@ -20,24 +20,52 @@ transitions_disease <- swpa_model$arguments$disease_transitions
 ```{r StateSpace}
 state_space <- expand.grid(Nw = 1:41,
                            Nc = 1:21,
-                           Exposure = 1:6) |>
+                           Exposure = 1:6,
+                           Month = 1:12) |>
   mutate(Action = NA)
 
 for (i in 1:nrow(state_space)){
   state_space$Action[i] <- D[state_space$Nw[i],
                              state_space$Nc[i],
                              state_space$Exposure[i],
-                             8]
+                             state_space$Month[i]]
 }
 
 state_space |>
+  mutate(Month = recode_values(Month, 
+                               from = 1:12, to = month.abb)) |>
+  mutate(Month = fct(Month, levels = month.abb)) |>
+  mutate(Exposure = recode_values(Exposure,
+                                  1 ~ "No cases",
+                                  2 ~ ">3000km",
+                                  3 ~ "1000-3000km",
+                                  4 ~ "100-1000km",
+                                  5 ~ "In Region",
+                                  6 ~ "Infected")) |>
+  mutate(Exposure = fct(Exposure)) |>
   mutate(Nc = (Nc*50)-50,
          Nw = (Nw*50)-50) |>
   ggplot(aes(x = Nc, y = Nw, fill = Action)) +
   geom_tile() + 
   coord_equal() +
-  facet_wrap(vars(Exposure), ncol = 6) +
-  scale_fill_scico(palette = 'vik', midpoint = 0)
+  facet_grid(rows = vars(Exposure), 
+             cols = vars(Month), switch = "y") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), position = "right") +
+  scale_fill_scico(palette = 'vik', midpoint = 0) +
+  labs(x = "Captive Population", y = "Wild Population") +
+  theme(axis.text.x = element_text(angle = 70, 
+                                   hjust = 1, vjust = 1,
+                                   colour = "white"),
+        axis.text.y = element_text(colour = "white"),
+        axis.title = element_text(colour = "white"),
+        axis.ticks = element_line(colour = "white"),
+        plot.background = element_rect(fill = "gray20"), 
+        legend.position = "top",
+        legend.background = element_rect(fill = "gray20"),
+        legend.text = element_text(colour = "white"),
+        legend.title = element_text(colour = "white"),
+        strip.background = element_rect(fill = "gray90"))
 ```
 
 ```{r Simulate flu}
@@ -101,12 +129,12 @@ popTraject <- data.frame(timestep = 1:timesteps,
                          Action = NA,
                          Cost = NA)
 popTraject[1,] <- data.frame(timestep = 1,
-                             Nw = 8, 
-                             Nc = 1, 
+                             Nw = 13, 
+                             Nc = 2, 
                              exposure = 4,
-                             month = 8, 
-                             Action = D[8,1,4,8],
-                             Cost = get_cost(8, 1, D[8,1,4,8]))
+                             month = 10, 
+                             Action = D[13,2,4,10],
+                             Cost = get_cost(13, 2, D[8,2,4,10]))
 
 for (t in 2:timesteps){
   popTraject$Nw[t] <- which.max(apply(transitions_pop[popTraject$Nw[t-1],
@@ -114,7 +142,7 @@ for (t in 2:timesteps){
                                       ,
                                       ,
                                       ifelse(popTraject$exposure[t-1]==6, 2, 1),
-                                      ifelse(popTraject$month[t-1]==8, 2, 1),
+                                      ifelse(popTraject$month[t-1]==10, 2, 1),
                                       which(actions == popTraject$Action[t-1])],
                                       1,
                                       max))
@@ -123,8 +151,9 @@ for (t in 2:timesteps){
                                             popTraject$Nw[t],
                                             ,
                                             ifelse(popTraject$exposure[t-1]==6, 2, 1),
-                                            ifelse(popTraject$month[t-1]==8, 2, 1),
+                                            ifelse(popTraject$month[t-1]==10, 2, 1),
                                             which(actions == popTraject$Action[t-1])])
+  
   popTraject$exposure[t] <- fluDf$fluState[t]
   popTraject$month[t] <- timesteps_months[t]
   popTraject$Action[t] <- D[popTraject$Nw[t],

@@ -51,6 +51,9 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   Nstates_month <- 12
   states_month <- 1:12
   
+  # Flag non-breeding months
+  nonbreeding_months <- seq(1,12)[1:12 %notin% breeding_month]
+  
   ## Also include binary states for breeding/nonbreeding and infected/noninfected 
   # Breeding: Binary
   Nstates_breeding <- 2
@@ -93,12 +96,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     nextWild <- 
       ((actualWild-(actualWild*tau_wc))*(1-mortality_w)) + 
       ((actualWild-(actualWild*tau_wc))*breeding*fecundity_w) +
-      (actualCaptive*tau_cw*phi_cw)
+      (actualCaptive*tau_cw*phi_cw*(1-mortality_c))
     
     nextCaptive <- 
       ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c)) + 
       ((actualCaptive-(actualCaptive*tau_cw))*breeding*fecundity_c) +
-      (actualWild*tau_wc*phi_wc)
+      (actualWild*tau_wc*phi_wc*(1-mortality_w))
     
     nextpop <- list(Wild = nextWild,
                     Captive = nextCaptive)
@@ -114,7 +117,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     
     maxPopUtility <- ((41-1)*2)+(21-1)
     maxCost <- max(
-      c((establish_cost + 40*wc_translocate_cost),
+      c((establish_cost + (40*wc_translocate_cost) + (20*captive_cost)),
         (20*captive_cost),
         (20*cw_translocate_cost))
       )
@@ -195,7 +198,6 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             probDensity <- function(x, n){
               sum(dpois(((x*50):((x*50)+49)), n))
             }
-
             
             wildMatrix <- matrix(sapply(0:40, probDensity, nextpop$Wild), 
                                  nrow = 41, 
@@ -215,24 +217,24 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             # Compute utility of action - utility uses exposure/month states rather
             # than infected/breeding states, hence the below logic to fill it fully.
             if (y == 1 & z == 1){
-              utility[w, x, 1:5, c(1:7, 9:12), i] <- get_utility(w,
-                                                                 x,
-                                                                 actions[i])
+              utility[w, x, 1:5, nonbreeding_months, i] <- get_utility(w,
+                                                                       x,
+                                                                       actions[i])
             }
             if (y == 1 & z == 2){
-              utility[w, x, 1:5, 8, i] <- get_utility(w,
-                                                      x,
-                                                      actions[i])
+              utility[w, x, 1:5, breeding_month, i] <- get_utility(w,
+                                                                   x,
+                                                                   actions[i])
             }
             if (y == 2 & z == 1){
-              utility[w, x, 6, c(1:7, 9:12), i] <- get_utility(w,
-                                                               x,
-                                                               actions[i])
+              utility[w, x, 6, nonbreeding_months, i] <- get_utility(w,
+                                                                     x,
+                                                                     actions[i])
             }
             if (y == 2 & z == 2){
-              utility[w, x, 6, 8, i] <- get_utility(w,
-                                                    x,
-                                                    actions[i])
+              utility[w, x, 6, breeding_month, i] <- get_utility(w,
+                                                                 x,
+                                                                 actions[i])
             }
           }
         }
