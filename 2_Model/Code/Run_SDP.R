@@ -97,12 +97,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
     
     nextWild <- 
       ((actualWild-(actualWild*tau_wc))*(1-mortality_w)) + 
-      ((actualWild-(actualWild*tau_wc))*breeding*fecundity_w) +
+      ((actualWild-(actualWild*tau_wc))*(1-mortality_w)*breeding*fecundity_w) +
       (actualCaptive*tau_cw*phi_cw*(1-mortality_c))
     
     nextCaptive <- 
       ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c)) + 
-      ((actualCaptive-(actualCaptive*tau_cw))*breeding*fecundity_c) +
+      ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c)*breeding*fecundity_c) +
       (actualWild*tau_wc*phi_wc*(1-mortality_w))
     
     nextpop <- list(Wild = nextWild,
@@ -160,7 +160,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   
     costUtility <- (((lastCaptivePop-1)-((lastCaptivePop-1)*(tau_cw)) +
                        ((lastWildPop-1)*tau_wc))*captive_cost) +
-      (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost)+
+      (((lastCaptivePop-1)*tau_cw)*cw_translocate_cost) +
       (((lastWildPop-1)*tau_wc)*wc_translocate_cost) +
       (setupCost)
     
@@ -227,13 +227,13 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             
             wildMatrix <- matrix(c(dpois(0, nextpop$Wild), 
                                    sapply(0:38, probDensity, nextpop$Wild),
-                                   sum(dpois(3950:10000, nextpop$Wild))), 
+                                   sum(dpois(1951:10000, nextpop$Wild))), 
                                  nrow = 41, 
                                  ncol = 21)
             
             captiveMatrix <- matrix(c(dpois(0, nextpop$Captive), 
                                       sapply(0:18, probDensity, nextpop$Captive),
-                                      sum(dpois(1950:10000, nextpop$Captive))), 
+                                      sum(dpois(951:10000, nextpop$Captive))), 
                                     nrow = 41, 
                                     ncol = 21,
                                     byrow = TRUE)

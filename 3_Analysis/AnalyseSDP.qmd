@@ -52,7 +52,8 @@ state_space |>
              cols = vars(Month), switch = "y") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), position = "right") +
-  scale_fill_scico(palette = 'vik', midpoint = 0) +
+  scale_fill_scico(palette = 'vik', midpoint = 0, 
+                   limits = c(-100,100)) +
   labs(x = "Captive Population", y = "Wild Population") +
   theme(axis.text.x = element_text(angle = 70, 
                                    hjust = 1, vjust = 1,
@@ -68,8 +69,51 @@ state_space |>
         strip.background = element_rect(fill = "gray90"))
 ```
 
+```{r small state space}
+
+state_space |>
+  mutate(Month = recode_values(Month, 
+                               from = 1:12, to = month.abb)) |>
+  mutate(Month = fct(Month, levels = month.abb)) |>
+  filter(Month == "Nov") |>
+  mutate(Exposure = recode_values(Exposure,
+                                  1 ~ "No cases",
+                                  2 ~ ">3000km",
+                                  3 ~ "1000-3000km",
+                                  4 ~ "100-1000km",
+                                  5 ~ "In Region",
+                                  6 ~ "Infected")) |>
+  mutate(Exposure = fct(Exposure)) |>
+  mutate(Nc = (Nc*50)-50,
+         Nw = (Nw*50)-50) |>
+  ggplot(aes(x = Nc, y = Nw, fill = Action)) +
+  geom_tile() + 
+  coord_equal() +
+  facet_grid(cols = vars(Exposure)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), position = "right") +
+  scale_fill_scico("Proportion of population to translocate",
+                   palette = 'vik', midpoint = 0, 
+                   limits = c(-100,100)) +
+  labs(x = "Captive Population", y = "Wild Population") +
+  theme(axis.text.x = element_text(angle = 70, 
+                                   hjust = 1, vjust = 1,
+                                   colour = "white"),
+        axis.text.y = element_text(colour = "white"),
+        axis.title = element_text(colour = "white"),
+        axis.ticks = element_line(colour = "white"),
+        plot.background = element_rect(fill = "gray20"), 
+        legend.position = "top",
+        legend.background = element_rect(fill = "gray20"),
+        legend.text = element_text(colour = "white"),
+        legend.title = element_text(colour = "white"),
+        strip.background = element_rect(fill = "gray90"))
+
+```
+
 ```{r Simulate flu}
-timesteps <- swpa_model$arguments$Tmax
+#timesteps <- swpa_model$arguments$Tmax
+timesteps <- 60
 fluDf <- data.frame(timestep = 1:timesteps,
                     fluState = NA)
 fluDf$fluState[1] <- 4
@@ -86,9 +130,10 @@ flu_plot <- fluDf |>
 ```
 
 ```{r Simulate decisions}
-Tmonths <- rep_len(c(swpa_model$arguments$breeding_month:12,
-                     1:(swpa_model$arguments$breeding_month-1)),
-                   length.out = swpa_model$arguments$Tmax)
+Tmonths <- rep_len(c(11:12,
+                     1:(11-1)),
+                   length.out = 60)
+
 timesteps_months <- Tmonths[1:timesteps]
 actions <- seq(-100, 100, by = 5)
 
@@ -132,9 +177,9 @@ popTraject[1,] <- data.frame(timestep = 1,
                              Nw = 16, 
                              Nc = 1, 
                              exposure = 4,
-                             month = 10, 
-                             Action = D[16,1,4,10],
-                             Cost = get_cost(16, 1, D[16,1,4,10]))
+                             month = 11, 
+                             Action = D[16,1,4,11],
+                             Cost = get_cost(16, 1, D[16,1,4,11]))
 
 for (t in 2:timesteps){
   
