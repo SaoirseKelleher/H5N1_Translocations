@@ -254,11 +254,11 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                phi_wc = phi_wc, 
                                phi_cw = phi_cw)
 
-            wildMatrix <- matrix(nextpop$Wild), 
+            wildMatrix <- matrix(nextpop$Wild, 
                                  nrow = 41, 
                                  ncol = 21)
             
-            captiveMatrix <- matrix(nextpop$Captive), 
+            captiveMatrix <- matrix(nextpop$Captive, 
                                     nrow = 41, 
                                     ncol = 21,
                                     byrow = TRUE)
