@@ -86,27 +86,69 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   # This function determines the next population of the wild and captive 
   # population given an action.
   dynamic <- function(actualWild, actualCaptive, action,
-                      disease, mortality_w_base, 
-                      mortality_w_flu, mortality_c, 
-                      breeding, fecundity_w, fecundity_c, 
-                      phi_wc, phi_cw){
+                      disease, breeding, 
+                      mortality_w_base, mortality_w_base_sd = 0.01, 
+                      mortality_w_flu, mortality_w_flu_sd = 0.1, 
+                      mortality_c, mortality_c_sd = 0.01, 
+                      fecundity_w, fecundity_w_sd = 0.1, 
+                      fecundity_c, fecundity_c_sd = 0.1, 
+                      phi_wc, phi_wc_sd = 0.01, 
+                      phi_cw, phi_cw_sd = 0.01, 
+                      nsamples = 10000){
+    
+    nextWild <- rep(NA, nsamples)
+    nextCaptive <- rep(NA, nsamples)
     
     tau_cw <- ifelse(action > 0, action, 0)/100
     tau_wc <- ifelse(action < 0, abs(action), 0)/100
-    mortality_w <- ifelse(disease == 1, mortality_w_flu, mortality_w_base)
     
-    nextWild <- 
-      ((actualWild-(actualWild*tau_wc))*(1-mortality_w)) + 
-      ((actualWild-(actualWild*tau_wc))*(1-mortality_w)*breeding*fecundity_w) +
-      (actualCaptive*tau_cw*phi_cw*(1-mortality_c))
+    for (i in 1:nsamples){
+      mortality_w_flu_sample <- truncnorm::rtruncnorm(1, 0, 1, 
+                                                      mean = mortality_w_flu,
+                                                      sd = mortality_w_flu_sd)
+      mortality_w_base_sample <- truncnorm::rtruncnorm(1, 0, 1, 
+                                                       mean = mortality_w_base,
+                                                       sd = mortality_w_base_sd)
+      mortality_c_sample <- truncnorm::rtruncnorm(1, 0, 1, 
+                                                  mean = mortality_c,
+                                                  sd = mortality_c_sd)
+      fecundity_c_sample <- rnorm(1,
+                                  mean = fecundity_c, 
+                                  sd = fecundity_c_sd)
+      phi_cw_sample <- truncnorm::rtruncnorm(1, 0, 1, 
+                                             mean = phi_cw,
+                                             sd = phi_cw_sd)
+      phi_wc_sample <- truncnorm::rtruncnorm(1, 0, 1, 
+                                             mean = phi_wc,
+                                             sd = phi_wc_sd)
+
+    mortality_w_sample <- ifelse(disease == 1, mortality_w_flu_sample, mortality_w_base_sample)
     
-    nextCaptive <- 
-      ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c)) + 
-      ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c)*breeding*fecundity_c) +
-      (actualWild*tau_wc*phi_wc*(1-mortality_w))
+    nextWild[i] <- 
+      ((actualWild-(actualWild*tau_wc))*(1-mortality_w_sample)) + 
+      ((actualWild-(actualWild*tau_wc))*(1-mortality_w_sample)*breeding*fecundity_w) +
+      (actualCaptive*tau_cw*phi_cw_sample*(1-mortality_c_sample))
     
-    nextpop <- list(Wild = nextWild,
-                    Captive = nextCaptive)
+    nextCaptive[i] <- 
+      ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c_sample)) + 
+      ((actualCaptive-(actualCaptive*tau_cw))*(1-mortality_c_sample)*breeding*fecundity_c_sample) +
+      (actualWild*tau_wc*phi_wc_sample*(1-mortality_w_sample))
+    
+      nextWild[i] <- round(nextWild[i]/50)
+      nextCaptive[i] <- round(nextCaptive[i]/50)
+      if (nextWild[i]/50 > 40){
+        nextWild[i] <- 40
+      }
+      if (nextCaptive[i]/50 > 20){
+        nextCaptive[i] <- 20
+      }
+    }
+    
+    nextWild_prob <- map(0:40, \(x) (sum(nextWild==x))/nsamples) |> unlist()
+    nextCaptive_prob <- map(0:20, \(x) (sum(nextCaptive==x))/nsamples) |> unlist()
+    
+    nextpop <- list(Wild = nextWild_prob,
+                    Captive = nextCaptive_prob)
     
     return(nextpop)
   }
@@ -121,7 +163,6 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                           infected,
                           breeding,
                           action) {
-    
     
     state_util <- matrix(0,
                          nrow = 41,
