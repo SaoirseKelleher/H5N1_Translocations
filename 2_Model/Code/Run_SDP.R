@@ -253,28 +253,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                fecundity_c = fecundity_c, 
                                phi_wc = phi_wc, 
                                phi_cw = phi_cw)
-            
-            # Round population projections into states. Add 1 so zero population 
-            # goes into state 1.
-            nextWildState <- round(nextpop$Wild/50)+1
-            nextWildState <- ifelse(nextWildState>41, 41, nextWildState)
-            nextCaptiveState <- round(nextpop$Captive/50)+1
-            nextCaptiveState <- ifelse(nextCaptiveState>21, 21, nextCaptiveState)
-            
-            # Calculate probabilities of next states
-            probDensity <- function(x, n){
-              sum(dpois((((x*50)+1):((x*50)+50)), n))
-            }
-            
-            wildMatrix <- matrix(c(dpois(0, nextpop$Wild), 
-                                   sapply(0:38, probDensity, nextpop$Wild),
-                                   sum(dpois(1951:10000, nextpop$Wild))), 
+
+            wildMatrix <- matrix(nextpop$Wild), 
                                  nrow = 41, 
                                  ncol = 21)
             
-            captiveMatrix <- matrix(c(dpois(0, nextpop$Captive), 
-                                      sapply(0:18, probDensity, nextpop$Captive),
-                                      sum(dpois(951:10000, nextpop$Captive))), 
+            captiveMatrix <- matrix(nextpop$Captive), 
                                     nrow = 41, 
                                     ncol = 21,
                                     byrow = TRUE)
