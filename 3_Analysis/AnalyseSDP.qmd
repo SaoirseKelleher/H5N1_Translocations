@@ -113,7 +113,7 @@ state_space |>
 
 ```{r Simulate flu}
 #timesteps <- swpa_model$arguments$Tmax
-timesteps <- 60
+timesteps <- 360
 fluDf <- data.frame(timestep = 1:timesteps,
                     fluState = NA)
 fluDf$fluState[1] <- 4
@@ -132,7 +132,7 @@ flu_plot <- fluDf |>
 ```{r Simulate decisions}
 Tmonths <- rep_len(c(11:12,
                      1:(11-1)),
-                   length.out = 60)
+                   length.out = 360)
 
 timesteps_months <- Tmonths[1:timesteps]
 actions <- seq(-100, 100, by = 5)

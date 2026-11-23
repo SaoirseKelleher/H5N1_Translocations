@@ -23,6 +23,9 @@
 run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                     mortality_w_base, mortality_w_flu, mortality_c,
                     phi_wc, phi_cw,
+                    fecundity_w_sd, fecundity_c_sd,
+                    mortality_w_base_sd, mortality_w_flu_sd, mortality_c_sd,
+                    phi_wc_sd, phi_cw_sd,
                     disease_transitions,
                     discount = 0.999,
                     Tmax = 360,
@@ -31,7 +34,9 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                     wc_translocate_cost,
                     captive_cost,
                     establish_cost,
-                    cost_weight){
+                    cost_weight,
+                    nsamples = 10000,
+                    seed = 1512){
 
   # Define states -----------------------------------------------------------
   # Define the states in the model. There are four dimensions to the state space:
@@ -83,47 +88,43 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   
 
   # Define population model -------------------------------------------------
-  # This function determines the next population of the wild and captive 
-  # population given an action.
-  dynamic <- function(actualWild, actualCaptive, action,
-                      disease, breeding, 
-                      mortality_w_base, mortality_w_base_sd = 0.01, 
-                      mortality_w_flu, mortality_w_flu_sd = 0.1, 
-                      mortality_c, mortality_c_sd = 0.01, 
-                      fecundity_w, fecundity_w_sd = 0.1, 
-                      fecundity_c, fecundity_c_sd = 0.1, 
-                      phi_wc, phi_wc_sd = 0.01, 
-                      phi_cw, phi_cw_sd = 0.01, 
-                      nsamples = 10000){
-    
-    nextWild <- rep(NA, nsamples)
-    nextCaptive <- rep(NA, nsamples)
-    
-    tau_cw <- ifelse(action > 0, action, 0)/100
-    tau_wc <- ifelse(action < 0, abs(action), 0)/100
-    
-    
+  # Draw random parameter values
+  
+  withr::with_seed(seed, {
     mortality_w_flu_sample <- truncnorm::rtruncnorm(nsamples, 0, 1, 
-                                                      mean = mortality_w_flu,
-                                                      sd = mortality_w_flu_sd)
+                                                    mean = mortality_w_flu,
+                                                    sd = mortality_w_flu_sd)
     mortality_w_base_sample <- truncnorm::rtruncnorm(nsamples, 0, 1, 
                                                      mean = mortality_w_base,
                                                      sd = mortality_w_base_sd)
     mortality_c_sample <- truncnorm::rtruncnorm(nsamples, 0, 1, 
                                                 mean = mortality_c,
                                                 sd = mortality_c_sd)
-    fecundity_c_sample <- rnorm(nsamples,
-                                mean = fecundity_c, 
-                                sd = fecundity_c_sd)
-    fecundity_w_sample <- rnorm(nsamples,
-                                mean = fecundity_w, 
-                                sd = fecundity_w_sd)
+    fecundity_c_sample <- truncnorm::rtruncnorm(nsamples, 0, Inf,
+                                                mean = fecundity_c, 
+                                                sd = fecundity_c_sd)
+    fecundity_w_sample <- truncnorm::rtruncnorm(nsamples, 0, Inf,
+                                                mean = fecundity_w, 
+                                                sd = fecundity_w_sd)
     phi_cw_sample <- truncnorm::rtruncnorm(nsamples, 0, 1, 
                                            mean = phi_cw,
                                            sd = phi_cw_sd)
     phi_wc_sample <- truncnorm::rtruncnorm(nsamples, 0, 1, 
                                            mean = phi_wc,
                                            sd = phi_wc_sd)
+  })
+  
+  
+  # This function determines the next population of the wild and captive 
+  # population given an action.
+  dynamic <- function(actualWild, actualCaptive, action,
+                      disease, breeding){
+    
+    nextWild <- rep(NA, nsamples)
+    nextCaptive <- rep(NA, nsamples)
+    
+    tau_cw <- ifelse(action > 0, action, 0)/100
+    tau_wc <- ifelse(action < 0, abs(action), 0)/100
 
     mortality_w_sample <- ifelse(disease == 1, mortality_w_flu_sample, mortality_w_base_sample)
     
@@ -238,15 +239,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             transitions_pop[w, x, , , y, z, i] <- dynamic(actualWild = (states_nWild[w]-1)*50, 
                                                           actualCaptive = (states_nCaptive[x]-1)*50,
                                                           disease = states_infected[y],
-                                                          action = actions[i],
-                                                          mortality_w_base = mortality_w_base, 
-                                                          mortality_w_flu = mortality_w_flu, 
-                                                          mortality_c = mortality_c, 
-                                                          breeding = states_breeding[z], 
-                                                          fecundity_w = fecundity_w, 
-                                                          fecundity_c = fecundity_c, 
-                                                          phi_wc = phi_wc, 
-                                                          phi_cw = phi_cw)
+                                                          breeding = states_breeding[z],
+                                                          action = actions[i])
           }
         }
       }
@@ -263,7 +257,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
             # Compute utility of action - utility uses exposure/month states rather
             # than infected/breeding states, hence the below logic to fill it fully.
             if (y == 1 & z == 1){
-              utility[w, x, 1:5, nonbreeding_months, i] <- get_utility(w,
+              utility[w, x, 1:5, nonbreeding_months, i] <- get_utility(state_util,
+                                                                       w,
                                                                        x,
                                                                        transitions_pop,
                                                                        FALSE,
@@ -271,7 +266,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                                                        actions[i])
             }
             if (y == 1 & z == 2){
-              utility[w, x, 1:5, breeding_month, i] <- get_utility(w,
+              utility[w, x, 1:5, breeding_month, i] <- get_utility(state_util,
+                                                                   w,
                                                                    x,
                                                                    transitions_pop,
                                                                    FALSE,
@@ -279,7 +275,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                                                    actions[i])
             }
             if (y == 2 & z == 1){
-              utility[w, x, 6, nonbreeding_months, i] <- get_utility(w,
+              utility[w, x, 6, nonbreeding_months, i] <- get_utility(state_util,
+                                                                     w,
                                                                      x,
                                                                      transitions_pop,
                                                                      TRUE,
@@ -287,7 +284,8 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
                                                                      actions[i])
             }
             if (y == 2 & z == 2){
-              utility[w, x, 6, breeding_month, i] <- get_utility(w,
+              utility[w, x, 6, breeding_month, i] <- get_utility(state_util,
+                                                                 w,
                                                                  x,
                                                                  transitions_pop,
                                                                  TRUE,
@@ -303,13 +301,12 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
           
 
   # Assign months to each timestep based on breeding month ------------------
-  Tmonths <- rep_len(c(start_month:12,1:(start_month-1)),
-                     length.out = Tmax)
+  Tmonths <- ((start_month - 1 + 0:(Tmax - 1)) %% 12)+1
   
 
   # Reshape arrays for matrix algebra ---------------------------------------
   # Number of population states
-  nPop <- Nstates_nwild*Nstates_nCaptive 
+  nPop <- Nstates_nWild*Nstates_nCaptive 
   # Number of state/action combinations
   nRow <- nPop*nActions
 
@@ -339,7 +336,7 @@ run_SDP <- function(fecundity_w, fecundity_c, breeding_month,
   
   # Solve Bellman via backwards iteration -----------------------------------
   # Terminal value: (w-1)*2 + (x-1), identical across exposure states
-  pop_value <- as.vector(outer((states_nWild - 1) * 2, states_nCaptive - 1, "+"))
+  pop_value <- as.vector(outer((states_nWild - 1) * 2, states_nCaptive - 1, "+"))/100
   Vnext <- matrix(pop_value, nrow = nPop, ncol = Nstates_exposure)
   
   D <- array(0, dim = c(Nstates_nWild, Nstates_nCaptive,
