@@ -33,7 +33,6 @@ fire_transitions <- matrix(
   byrow = TRUE)
 ```
 
-
 ```{r VisualiseTransitions}
 
 
